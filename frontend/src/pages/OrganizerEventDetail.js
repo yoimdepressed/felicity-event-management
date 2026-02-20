@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import AttendanceDashboard from './AttendanceDashboard';
 import {
   Container,
   Box,
@@ -54,6 +55,7 @@ import {
   Schedule,
   LocalOffer,
   Inventory,
+  QrCode2,
 } from '@mui/icons-material';
 import api from '../services/api';
 
@@ -336,6 +338,7 @@ const OrganizerEventDetail = () => {
             <Tab label="Overview" icon={<EventIcon />} iconPosition="start" />
             <Tab label="Analytics" icon={<Assessment />} iconPosition="start" />
             <Tab label="Participants" icon={<People />} iconPosition="start" />
+            <Tab label="Attendance" icon={<QrCode2 />} iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -991,6 +994,13 @@ const OrganizerEventDetail = () => {
                 </Table>
               </TableContainer>
             )}
+          </Box>
+        )}
+
+        {/* Tab 3: Attendance with QR Scanner */}
+        {tabValue === 3 && (
+          <Box>
+            <AttendanceDashboard eventId={id} />
           </Box>
         )}
       </Container>
