@@ -60,10 +60,18 @@ const AttendanceDashboard = ({ eventId }) => {
   const fetchDashboard = async () => {
     try {
       setError(null);
+      console.log('Fetching dashboard for event:', eventId);
       const response = await api.get(`/attendance/event/${eventId}/dashboard`);
-      setDashboardData(response.data.data);
-      setFilteredData(response.data.data.registrations);
+      console.log('Dashboard response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        setDashboardData(response.data.data);
+        setFilteredData(response.data.data.registrations || []);
+      } else {
+        setError('No dashboard data available');
+      }
     } catch (err) {
+      console.error('Dashboard fetch error:', err);
       setError(err.response?.data?.message || 'Failed to load attendance data');
     } finally {
       setLoading(false);
@@ -177,6 +185,37 @@ const AttendanceDashboard = ({ eventId }) => {
     );
   }
 
+  if (!dashboardData) {
+    return (
+      <Box>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="h6" gutterBottom>No Dashboard Data Available</Typography>
+          <Typography variant="body2" gutterBottom>
+            This could mean:
+          </Typography>
+          <ul>
+            <li>No registrations for this event yet</li>
+            <li>API endpoint not responding</li>
+            <li>Permission issue (are you the event organizer?)</li>
+          </ul>
+          <Button 
+            variant="outlined" 
+            onClick={handleRefresh} 
+            sx={{ mt: 2 }}
+            disabled={refreshing}
+          >
+            {refreshing ? 'Refreshing...' : 'Try Refreshing'}
+          </Button>
+        </Alert>
+        
+        {/* Still show QR Scanner even if no data */}
+        <Box mb={3}>
+          <QRScanner eventId={eventId} onScanSuccess={handleRefresh} />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       {/* QR Scanner Section */}
@@ -196,7 +235,7 @@ const AttendanceDashboard = ({ eventId }) => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ bgcolor: 'primary.light', color: 'white' }}>
             <CardContent>
-              <Typography variant="h4">{dashboardData.statistics.totalRegistrations}</Typography>
+              <Typography variant="h4">{dashboardData?.statistics?.totalRegistrations || 0}</Typography>
               <Typography variant="body2">Total Registrations</Typography>
             </CardContent>
           </Card>
@@ -204,7 +243,7 @@ const AttendanceDashboard = ({ eventId }) => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ bgcolor: 'success.light', color: 'white' }}>
             <CardContent>
-              <Typography variant="h4">{dashboardData.statistics.totalAttended}</Typography>
+              <Typography variant="h4">{dashboardData?.statistics?.totalAttended || 0}</Typography>
               <Typography variant="body2">Attended</Typography>
             </CardContent>
           </Card>
@@ -212,7 +251,7 @@ const AttendanceDashboard = ({ eventId }) => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ bgcolor: 'warning.light', color: 'white' }}>
             <CardContent>
-              <Typography variant="h4">{dashboardData.statistics.totalNotAttended}</Typography>
+              <Typography variant="h4">{dashboardData?.statistics?.totalNotAttended || 0}</Typography>
               <Typography variant="body2">Not Attended</Typography>
             </CardContent>
           </Card>
@@ -220,7 +259,7 @@ const AttendanceDashboard = ({ eventId }) => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ bgcolor: 'info.light', color: 'white' }}>
             <CardContent>
-              <Typography variant="h4">{dashboardData.statistics.attendancePercentage}%</Typography>
+              <Typography variant="h4">{dashboardData?.statistics?.attendancePercentage || 0}%</Typography>
               <Typography variant="body2">Attendance Rate</Typography>
             </CardContent>
           </Card>

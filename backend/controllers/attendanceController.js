@@ -184,7 +184,8 @@ export const getAttendanceDashboard = async (req, res) => {
     })
       .populate('participant', 'firstName lastName email contactNumber')
       .populate('scannedBy', 'firstName lastName')
-      .sort({ attendedAt: -1 });
+      .sort({ attendedAt: -1 })
+      .lean(); // Use lean() for better performance
 
     // Calculate statistics
     const totalRegistrations = registrations.length;
@@ -202,19 +203,19 @@ export const getAttendanceDashboard = async (req, res) => {
       return acc;
     }, {});
 
-    // Recent scans (last 10)
+    // Recent scans (last 10) with null safety
     const recentScans = registrations
-      .filter(r => r.attended)
+      .filter(r => r.attended && r.participant)
       .slice(0, 10)
       .map(r => ({
         ticketId: r.ticketId,
         participant: {
-          name: `${r.participant.firstName} ${r.participant.lastName}`,
-          email: r.participant.email
+          name: r.participant ? `${r.participant.firstName || ''} ${r.participant.lastName || ''}`.trim() : 'N/A',
+          email: r.participant?.email || 'N/A'
         },
         attendedAt: r.attendedAt,
-        scanMethod: r.scanMethod,
-        scannedBy: r.scannedBy ? `${r.scannedBy.firstName} ${r.scannedBy.lastName}` : 'N/A',
+        scanMethod: r.scanMethod || 'N/A',
+        scannedBy: r.scannedBy ? `${r.scannedBy.firstName || ''} ${r.scannedBy.lastName || ''}`.trim() : 'N/A',
         manualOverride: r.manualOverride?.isOverridden || false
       }));
 
@@ -234,13 +235,13 @@ export const getAttendanceDashboard = async (req, res) => {
           _id: r._id,
           ticketId: r.ticketId,
           participant: {
-            name: `${r.participant.firstName} ${r.participant.lastName}`,
-            email: r.participant.email,
-            contactNumber: r.participant.contactNumber
+            name: r.participant ? `${r.participant.firstName || ''} ${r.participant.lastName || ''}`.trim() : 'N/A',
+            email: r.participant?.email || 'N/A',
+            contactNumber: r.participant?.contactNumber || 'N/A'
           },
-          attended: r.attended,
-          attendedAt: r.attendedAt,
-          scanMethod: r.scanMethod,
+          attended: r.attended || false,
+          attendedAt: r.attendedAt || null,
+          scanMethod: r.scanMethod || null,
           registrationStatus: r.registrationStatus,
           manualOverride: r.manualOverride?.isOverridden || false,
           overrideReason: r.manualOverride?.reason || null
