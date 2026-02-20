@@ -11,6 +11,9 @@ import {
   permanentlyDeleteOrganizer,
   resetOrganizerPassword,
   getDashboardStats,
+  getPasswordResetRequests,
+  approvePasswordResetRequest,
+  rejectPasswordResetRequest,
 } from '../controllers/adminController.js';
 
 import {
@@ -102,6 +105,25 @@ router.get('/events', getAllEventsAdmin);
 // @desc    Permanently delete event from database
 // @access  Private (Admin only)
 router.delete('/events/:id/permanent', permanentlyDeleteEvent);
+
+// ============================================
+// PASSWORD RESET REQUEST ROUTES
+// ============================================
+
+// @route   GET /api/admin/password-resets
+// @desc    Get password reset requests (filter by status)
+// @access  Private (Admin only)
+router.get('/password-resets', getPasswordResetRequests);
+
+// @route   PUT /api/admin/password-resets/:id/approve
+// @desc    Approve a password reset request
+// @access  Private (Admin only)
+router.put('/password-resets/:id/approve', approvePasswordResetRequest);
+
+// @route   PUT /api/admin/password-resets/:id/reject
+// @desc    Reject a password reset request
+// @access  Private (Admin only)
+router.put('/password-resets/:id/reject', rejectPasswordResetRequest);
 
 // ============================================
 // EXPORT ROUTER

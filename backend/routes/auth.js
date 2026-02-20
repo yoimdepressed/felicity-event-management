@@ -1,7 +1,6 @@
 // Import Express Router
 import express from 'express';
 
-// Import controller functions
 import {
   registerParticipant,
   login,
@@ -9,6 +8,8 @@ import {
   getMe,
   updateProfile,
   changePassword,
+  submitPasswordResetRequest,
+  getMyPasswordResetRequests,
 } from '../controllers/authController.js';
 
 // Import middleware
@@ -60,6 +61,16 @@ router.put('/profile', protect, updateProfile);
 // @access  Private (must be logged in)
 // @body    { currentPassword, newPassword }
 router.put('/change-password', protect, changePassword);
+
+// @route   POST /api/auth/request-password-reset
+// @desc    Organizer submits password reset request to admin
+// @access  Private (Organizer only)
+router.post('/request-password-reset', protect, authorize('organizer'), submitPasswordResetRequest);
+
+// @route   GET /api/auth/my-password-reset-requests
+// @desc    Get organizer's password reset request history
+// @access  Private (Organizer only)
+router.get('/my-password-reset-requests', protect, authorize('organizer'), getMyPasswordResetRequests);
 
 // ============================================
 // EXPORT ROUTER

@@ -42,6 +42,8 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import FeedbackSection from '../components/FeedbackSection';
+import AddToCalendar from '../components/AddToCalendar';
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -80,7 +82,7 @@ const EventDetails = () => {
       setError('');
       const response = await api.get(`/events/${id}`);
       setEvent(response.data.data);
-      
+
       // Initialize custom form data
       if (response.data.data.customRegistrationForm) {
         const initialFormData = {};
@@ -102,8 +104,8 @@ const EventDetails = () => {
       const response = await api.get('/registrations/my');
       const registrations = response.data.data || [];
       // Only consider active registrations (Confirmed or Pending), not Cancelled or Rejected
-      const isRegistered = registrations.some(reg => 
-        reg.event._id === id && 
+      const isRegistered = registrations.some(reg =>
+        reg.event._id === id &&
         (reg.registrationStatus === 'Confirmed' || reg.registrationStatus === 'Pending')
       );
       setAlreadyRegistered(isRegistered);
@@ -115,14 +117,14 @@ const EventDetails = () => {
   // Check if registration is allowed
   const getRegistrationStatus = () => {
     if (!event) return { allowed: false, reason: 'Loading...' };
-    
+
     if (alreadyRegistered) {
       return { allowed: false, reason: 'Already Registered', color: 'info' };
     }
 
     const now = new Date();
     const deadline = new Date(event.registrationDeadline);
-    
+
     if (now > deadline) {
       return { allowed: false, reason: 'Registration Deadline Passed', color: 'error' };
     }
@@ -401,32 +403,32 @@ const EventDetails = () => {
         {/* Capacity/Stock Status */}
         {((event.eventType === 'Normal' && event.maxParticipants) ||
           (event.eventType === 'Merchandise' && event.availableStock !== null)) && (
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <PeopleIcon color="primary" />
-              <Typography variant="h6">
-                {event.eventType === 'Normal' ? 'Capacity Status' : 'Stock Availability'}
-              </Typography>
-            </Box>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">
-                  {event.eventType === 'Normal'
-                    ? `${event.currentRegistrations} / ${event.maxParticipants} registered`
-                    : `${event.availableStock} units available`}
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {Math.round(getCapacityPercentage())}%
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <PeopleIcon color="primary" />
+                <Typography variant="h6">
+                  {event.eventType === 'Normal' ? 'Capacity Status' : 'Stock Availability'}
                 </Typography>
               </Box>
-              <LinearProgress
-                variant="determinate"
-                value={getCapacityPercentage()}
-                color={getCapacityPercentage() > 80 ? 'error' : 'primary'}
-              />
-            </Paper>
-          </Box>
-        )}
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body1">
+                    {event.eventType === 'Normal'
+                      ? `${event.currentRegistrations} / ${event.maxParticipants} registered`
+                      : `${event.availableStock} units available`}
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {Math.round(getCapacityPercentage())}%
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={getCapacityPercentage()}
+                  color={getCapacityPercentage() > 80 ? 'error' : 'primary'}
+                />
+              </Paper>
+            </Box>
+          )}
 
         {/* Price (Merchandise) */}
         {event.eventType === 'Merchandise' && (
@@ -521,7 +523,19 @@ const EventDetails = () => {
               Registration is currently not available
             </Typography>
           )}
+
+          {/* Add to Calendar - shown when registered */}
+          {alreadyRegistered && (
+            <Box sx={{ mt: 2 }}>
+              <AddToCalendar eventId={id} eventName={event?.eventName} />
+            </Box>
+          )}
         </Box>
+
+        {/* Anonymous Feedback Section - shown when registered */}
+        {alreadyRegistered && (
+          <FeedbackSection eventId={id} isOrganizer={false} />
+        )}
       </Paper>
 
       {/* Registration Dialog */}

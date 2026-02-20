@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -10,9 +13,17 @@ import publicRoutes from './routes/public.js';
 import eventRoutes from './routes/events.js';
 import registrationRoutes from './routes/registrations.js';
 import attendanceRoutes from './routes/attendance.js';
+import paymentRoutes from './routes/payment.js';
+import discussionRoutes from './routes/discussion.js';
+import feedbackRoutes from './routes/feedback.js';
+import calendarRoutes from './routes/calendar.js';
 
 // Load environment variables
 dotenv.config();
+
+// __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize Express app
 const app = express();
@@ -20,18 +31,21 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads', 'payment-proofs');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Middleware - CORS Configuration for Production
 const allowedOrigins = [
   'http://localhost:3000',
   process.env.FRONTEND_URL,
-  // Add more origins as needed
-].filter(Boolean); // Remove undefined values
+].filter(Boolean);
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -43,16 +57,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Felicity Event Management System API',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
       admin: '/api/admin',
       events: '/api/events',
-      public: '/api/public'
+      public: '/api/public',
+      payments: '/api/payments',
+      discussions: '/api/discussions',
+      attendance: '/api/attendance',
     }
   });
 });
@@ -61,27 +81,16 @@ app.get('/', (req, res) => {
 // API ROUTES
 // ============================================
 
-// Public routes (no authentication required)
 app.use('/api/public', publicRoutes);
-
-// Authentication routes
 app.use('/api/auth', authRoutes);
-
-// Admin routes
 app.use('/api/admin', adminRoutes);
-
-// Event routes
 app.use('/api/events', eventRoutes);
-
-// Registration routes
 app.use('/api/registrations', registrationRoutes);
-
-// Attendance routes
 app.use('/api/attendance', attendanceRoutes);
-
-// Other routes (to be added)
-// app.use('/api/participants', participantRoutes);
-// app.use('/api/organizers', organizerRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/discussions', discussionRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

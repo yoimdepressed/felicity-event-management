@@ -40,6 +40,8 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
   changePassword: (data) => api.put('/auth/change-password', data),
+  submitPasswordResetRequest: (reason) => api.post('/auth/request-password-reset', { reason }),
+  getMyPasswordResetRequests: () => api.get('/auth/my-password-reset-requests'),
 };
 
 export const adminAPI = {
@@ -54,6 +56,41 @@ export const adminAPI = {
 
 export const publicAPI = {
   getOrganizers: () => api.get('/public/organizers'),
+};
+
+export const attendanceAPI = {
+  scanQR: (ticketId, eventId) => api.post('/attendance/scan', { ticketId, eventId }),
+  manualOverride: (data) => api.post('/attendance/manual', data),
+  getEventAttendance: (eventId) => api.get(`/attendance/event/${eventId}`),
+  getAuditLog: (eventId) => api.get(`/attendance/event/${eventId}/audit`),
+};
+
+export const discussionAPI = {
+  getMessages: (eventId, params = {}) => api.get(`/discussions/event/${eventId}`, { params }),
+  postMessage: (eventId, data) => api.post(`/discussions/event/${eventId}`, data),
+  deleteMessage: (id) => api.delete(`/discussions/${id}`),
+  pinMessage: (id) => api.put(`/discussions/${id}/pin`),
+  reactToMessage: (id, emoji) => api.post(`/discussions/${id}/react`, { emoji }),
+};
+
+export const paymentAPI = {
+  uploadProof: (registrationId, formData) => api.post(`/payments/${registrationId}/upload-proof`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getPendingPayments: (eventId, status) => api.get(`/payments/event/${eventId}/pending`, { params: { status } }),
+  approvePayment: (registrationId, adminNotes) => api.put(`/payments/${registrationId}/approve`, { adminNotes }),
+  rejectPayment: (registrationId, adminNotes) => api.put(`/payments/${registrationId}/reject`, { adminNotes }),
+};
+
+export const feedbackAPI = {
+  submitFeedback: (eventId, data) => api.post(`/feedback/event/${eventId}`, data),
+  getEventFeedback: (eventId, rating) => api.get(`/feedback/event/${eventId}`, { params: { rating } }),
+  getMyFeedback: (eventId) => api.get(`/feedback/event/${eventId}/my-feedback`),
+};
+
+export const calendarAPI = {
+  getCalendarLinks: (eventId) => api.get(`/calendar/event/${eventId}/links`),
+  downloadICS: (eventId) => `${API_BASE_URL}/calendar/event/${eventId}/ics`,
 };
 
 export default api;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AttendanceDashboard from './AttendanceDashboard';
+import FeedbackSection from '../components/FeedbackSection';
 import {
   Container,
   Box,
@@ -62,14 +63,14 @@ import api from '../services/api';
 const OrganizerEventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [event, setEvent] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [filteredRegistrations, setFilteredRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState(0);
-  
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -116,7 +117,7 @@ const OrganizerEventDetail = () => {
 
     // Search filter (name or email)
     if (searchTerm) {
-      filtered = filtered.filter(reg => 
+      filtered = filtered.filter(reg =>
         reg.participant?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         reg.participant?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         reg.participant?.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -236,13 +237,13 @@ const OrganizerEventDetail = () => {
     const cancelled = registrations.filter(r => r.registrationStatus === 'Cancelled' || r.registrationStatus === 'Rejected');
     const attended = registrations.filter(r => r.attendanceMarked === true);
     const teamsWithMembers = registrations.filter(r => r.teamName && r.teamMembers && r.teamMembers.length > 0);
-    
+
     const totalRevenue = confirmed.reduce((sum, reg) => {
       return sum + (event?.price || 0) * (reg.quantity || 1);
     }, 0);
 
-    const attendanceRate = confirmed.length > 0 
-      ? Math.round((attended.length / confirmed.length) * 100) 
+    const attendanceRate = confirmed.length > 0
+      ? Math.round((attended.length / confirmed.length) * 100)
       : 0;
 
     const teamCompletion = registrations.length > 0
@@ -250,8 +251,8 @@ const OrganizerEventDetail = () => {
       : 0;
 
     const totalTeamMembers = teamsWithMembers.reduce((sum, reg) => sum + (reg.teamMembers?.length || 0), 0);
-    const averageTeamSize = teamsWithMembers.length > 0 
-      ? Math.round(totalTeamMembers / teamsWithMembers.length) 
+    const averageTeamSize = teamsWithMembers.length > 0
+      ? Math.round(totalTeamMembers / teamsWithMembers.length)
       : 0;
 
     return {
@@ -339,6 +340,7 @@ const OrganizerEventDetail = () => {
             <Tab label="Analytics" icon={<Assessment />} iconPosition="start" />
             <Tab label="Participants" icon={<People />} iconPosition="start" />
             <Tab label="Attendance" icon={<QrCode2 />} iconPosition="start" />
+            <Tab label="Feedback" icon={<Assessment />} iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -898,8 +900,8 @@ const OrganizerEventDetail = () => {
                       No Participants Found
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {registrations.length === 0 
-                        ? 'No one has registered for this event yet.' 
+                      {registrations.length === 0
+                        ? 'No one has registered for this event yet.'
                         : 'Try adjusting your search or filters.'}
                     </Typography>
                   </Box>
@@ -950,7 +952,7 @@ const OrganizerEventDetail = () => {
                             size="small"
                             color={
                               reg.registrationStatus === 'Confirmed' ? 'success' :
-                              reg.registrationStatus === 'Pending' ? 'warning' : 'error'
+                                reg.registrationStatus === 'Pending' ? 'warning' : 'error'
                             }
                           />
                         </TableCell>
@@ -1001,6 +1003,13 @@ const OrganizerEventDetail = () => {
         {tabValue === 3 && (
           <Box>
             <AttendanceDashboard eventId={id} />
+          </Box>
+        )}
+
+        {/* Tab 4: Anonymous Feedback */}
+        {tabValue === 4 && (
+          <Box>
+            <FeedbackSection eventId={id} isOrganizer={true} />
           </Box>
         )}
       </Container>

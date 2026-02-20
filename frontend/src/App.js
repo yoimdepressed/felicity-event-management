@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
 import ProfileEdit from './pages/ProfileEdit';
 import AdminDashboard from './pages/AdminDashboard';
+import ManageOrganizers from './pages/ManageOrganizers';
+import PasswordResetRequests from './pages/PasswordResetRequests';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import CreateEvent from './pages/CreateEvent';
@@ -30,7 +32,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           <Route
             path="/onboarding"
             element={
@@ -39,7 +41,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/profile/edit"
             element={
@@ -48,7 +50,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/admin"
             element={
@@ -57,7 +59,25 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
+          <Route
+            path="/admin/organizers"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <ManageOrganizers />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/password-resets"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <PasswordResetRequests />
+              </PrivateRoute>
+            }
+          />
+
           <Route
             path="/participant"
             element={
@@ -66,7 +86,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/my-events"
             element={
@@ -75,7 +95,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/browse-events"
             element={
@@ -84,7 +104,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/event/:id"
             element={
@@ -93,7 +113,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/profile"
             element={
@@ -102,7 +122,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/clubs"
             element={
@@ -111,7 +131,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/participant/club/:id"
             element={
@@ -120,7 +140,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer"
             element={
@@ -129,7 +149,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/create-event"
             element={
@@ -138,7 +158,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/event/:id/edit"
             element={
@@ -147,7 +167,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/my-events"
             element={
@@ -156,7 +176,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/ongoing-events"
             element={
@@ -165,7 +185,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/profile"
             element={
@@ -174,7 +194,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/organizer/event/:id"
             element={
@@ -183,7 +203,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>

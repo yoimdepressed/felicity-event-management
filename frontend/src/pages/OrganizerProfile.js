@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import { authAPI } from '../services/api';
 import {
   Container,
   Box,
@@ -15,6 +16,14 @@ import {
   CircularProgress,
   Divider,
   InputAdornment,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import {
   Person,
@@ -26,6 +35,7 @@ import {
   ArrowBack,
   Webhook,
   Phone,
+  VpnKey,
 } from '@mui/icons-material';
 import api from '../services/api';
 
@@ -84,7 +94,7 @@ const OrganizerProfile = () => {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       setError('');
@@ -121,12 +131,12 @@ const OrganizerProfile = () => {
       console.log('Sending profile update:', updateData); // Debug log
       const response = await api.put('/auth/profile', updateData);
       console.log('Profile update response:', response.data); // Debug log
-      
+
       // Refresh user data
       if (refreshUser) {
         await refreshUser();
       }
-      
+
       setSuccess('Profile updated successfully!');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -139,7 +149,7 @@ const OrganizerProfile = () => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       setError('');
@@ -167,7 +177,7 @@ const OrganizerProfile = () => {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-      
+
       setSuccess('Password changed successfully!');
       setPasswordData({
         currentPassword: '',
@@ -466,8 +476,128 @@ const OrganizerProfile = () => {
             </form>
           </CardContent>
         </Card>
+
+        {/* Password Reset Request Section */}
+        <Card sx={{ mt: 4 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              <VpnKey sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Request Password Reset
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              If you've forgotten your current password, submit a request to the admin to reset it.
+            </Typography>
+            <PasswordResetRequestSection />
+          </CardContent>
+        </Card>
       </Container>
     </>
+  );
+};
+
+// Embedded component for password reset requests
+const PasswordResetRequestSection = () => {
+  const [reason, setReason] = useState('');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const response = await authAPI.getMyPasswordResetRequests();
+      setRequests(response.data.data || []);
+    } catch (err) {
+      console.error('Error fetching reset requests:', err);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim()) {
+      setError('Please provide a reason');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await authAPI.submitPasswordResetRequest(reason);
+      setSuccess('Password reset request submitted! Admin will review it.');
+      setReason('');
+      fetchRequests();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+
+      <form onSubmit={handleSubmit}>
+        <TextField
+          fullWidth
+          label="Reason for password reset"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          multiline
+          rows={2}
+          placeholder="e.g., Forgot password, need new credentials..."
+          required
+          sx={{ mb: 2 }}
+        />
+        <Button
+          type="submit"
+          variant="outlined"
+          startIcon={<VpnKey />}
+          disabled={loading || !reason.trim()}
+        >
+          {loading ? <CircularProgress size={20} /> : 'Submit Reset Request'}
+        </Button>
+      </form>
+
+      {requests.length > 0 && (
+        <Box mt={3}>
+          <Typography variant="subtitle2" gutterBottom>Request History:</Typography>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Reason</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Notes</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {requests.map((req) => (
+                  <TableRow key={req._id}>
+                    <TableCell>{new Date(req.createdAt).toLocaleDateString('en-IN')}</TableCell>
+                    <TableCell>{req.reason}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={req.status}
+                        size="small"
+                        color={req.status === 'approved' ? 'success' : req.status === 'rejected' ? 'error' : 'warning'}
+                      />
+                    </TableCell>
+                    <TableCell>{req.adminNotes || '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
+    </Box>
   );
 };
 

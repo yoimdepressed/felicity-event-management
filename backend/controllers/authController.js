@@ -1,5 +1,6 @@
 // Import User Model
 import User from '../models/User.js';
+import PasswordResetRequest from '../models/PasswordResetRequest.js';
 
 // REGISTER PARTICIPANT
 
@@ -87,7 +88,7 @@ export const registerParticipant = async (req, res) => {
 // LOGIN
 
 export const login = async (req, res) => {
-  try {    
+  try {
     // Step 1: Extract email and password from request body
     const { email, password } = req.body;
 
@@ -268,7 +269,8 @@ export const updateProfile = async (req, res) => {
       if (category) user.category = category;
       if (description) user.description = description;
       if (contactEmail) user.contactEmail = contactEmail;
-      if (discordWebhook) user.discordWebhook = discordWebhook;
+      if (contactNumber) user.contactNumber = contactNumber;
+      if (discordWebhook !== undefined) user.discordWebhook = discordWebhook;
     }
 
     // Step 5: Save updated user
@@ -349,6 +351,83 @@ export const changePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to change password',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================
+// ORGANIZER PASSWORD RESET REQUEST
+// ============================================
+
+// @desc    Submit a password reset request (organizer submits to admin)
+// @route   POST /api/auth/request-password-reset
+// @access  Private (Organizer)
+export const submitPasswordResetRequest = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a reason for the password reset request',
+      });
+    }
+
+    // Check for existing pending request
+    const existingRequest = await PasswordResetRequest.findOne({
+      user: req.user.id,
+      status: 'pending',
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a pending password reset request. Please wait for admin review.',
+      });
+    }
+
+    const resetRequest = await PasswordResetRequest.create({
+      user: req.user.id,
+      email: req.user.email,
+      reason: reason.trim(),
+      status: 'pending',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Password reset request submitted successfully. Admin will review your request.',
+      data: resetRequest,
+    });
+  } catch (error) {
+    console.error('Submit Password Reset Request Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit password reset request',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get my password reset request history (organizer)
+// @route   GET /api/auth/my-password-reset-requests
+// @access  Private (Organizer)
+export const getMyPasswordResetRequests = async (req, res) => {
+  try {
+    const requests = await PasswordResetRequest.find({ user: req.user.id })
+      .populate('reviewedBy', 'firstName lastName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests,
+    });
+  } catch (error) {
+    console.error('Get My Password Reset Requests Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch password reset requests',
       error: error.message,
     });
   }

@@ -6,7 +6,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // CORE FIELDS
     // ============================================
-    
+
     participant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -24,7 +24,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // TICKET INFORMATION
     // ============================================
-    
+
     ticketId: {
       type: String,
       unique: true,
@@ -40,18 +40,18 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // REGISTRATION STATUS
     // ============================================
-    
+
     registrationStatus: {
       type: String,
-      enum: ['Pending', 'Confirmed', 'Cancelled', 'Rejected'],
-      default: 'Confirmed', // Auto-confirm for now
+      enum: ['Pending', 'Confirmed', 'Cancelled', 'Rejected', 'PendingApproval'],
+      default: 'Confirmed',
       index: true,
     },
 
     // ============================================
     // TEAM INFORMATION (Optional for team events)
     // ============================================
-    
+
     teamName: {
       type: String,
       default: null,
@@ -66,7 +66,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // CUSTOM FORM DATA (For Normal Events)
     // ============================================
-    
+
     customFormData: {
       type: [
         {
@@ -81,7 +81,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // PAYMENT INFORMATION
     // ============================================
-    
+
     paymentStatus: {
       type: String,
       enum: ['Pending', 'Completed', 'Failed', 'Refunded'],
@@ -109,7 +109,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // MERCHANDISE-SPECIFIC FIELDS
     // ============================================
-    
+
     merchandiseDetails: {
       size: {
         type: String,
@@ -127,10 +127,37 @@ const registrationSchema = new mongoose.Schema(
       },
     },
 
+    // Payment proof for merchandise orders
+    paymentProofUrl: {
+      type: String,
+      default: null,
+    },
+
+    paymentApproval: {
+      status: {
+        type: String,
+        enum: ['Pending', 'Approved', 'Rejected', null],
+        default: null,
+      },
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      reviewedAt: {
+        type: Date,
+        default: null,
+      },
+      adminNotes: {
+        type: String,
+        default: null,
+      },
+    },
+
     // ============================================
     // ATTENDANCE TRACKING
     // ============================================
-    
+
     attended: {
       type: Boolean,
       default: false,
@@ -177,7 +204,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // CANCELLATION
     // ============================================
-    
+
     cancellationReason: {
       type: String,
       default: null,
@@ -191,7 +218,7 @@ const registrationSchema = new mongoose.Schema(
     // ============================================
     // METADATA
     // ============================================
-    
+
     registeredFrom: {
       type: String,
       enum: ['Web', 'Mobile', 'Admin'],
@@ -235,17 +262,17 @@ registrationSchema.statics.generateTicketId = function () {
 // Get registrations by participant
 registrationSchema.statics.getByParticipant = function (participantId, filters = {}) {
   const query = { participant: participantId };
-  
+
   // Add status filter if provided
   if (filters.status) {
     query.registrationStatus = filters.status;
   }
-  
+
   // Add event type filter if provided
   if (filters.eventType) {
     // This will need population, handle in controller
   }
-  
+
   return this.find(query)
     .populate({
       path: 'event',
@@ -261,11 +288,11 @@ registrationSchema.statics.getByParticipant = function (participantId, filters =
 // Get registrations by event
 registrationSchema.statics.getByEvent = function (eventId, filters = {}) {
   const query = { event: eventId };
-  
+
   if (filters.status) {
     query.registrationStatus = filters.status;
   }
-  
+
   return this.find(query)
     .populate('participant', 'firstName lastName email college contactNumber participantType')
     .sort({ createdAt: -1 });
@@ -319,7 +346,7 @@ registrationSchema.pre('save', function () {
   if (!this.ticketId) {
     this.ticketId = mongoose.model('Registration').generateTicketId();
   }
-  
+
   // Set payment status based on amount
   if (this.isNew && this.amountPaid === 0) {
     this.paymentStatus = 'Completed';
@@ -341,12 +368,12 @@ registrationSchema.virtual('canCancel').get(function () {
   if (this.registrationStatus === 'Cancelled' || this.registrationStatus === 'Rejected') {
     return false;
   }
-  
+
   // Can't cancel if event has already happened (populate event first)
   if (this.event && this.event.eventStartDate) {
     return new Date() < new Date(this.event.eventStartDate);
   }
-  
+
   return true;
 });
 

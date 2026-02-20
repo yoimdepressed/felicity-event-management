@@ -1,5 +1,6 @@
 // Import User Model
 import User from '../models/User.js';
+import PasswordResetRequest from '../models/PasswordResetRequest.js';
 
 // ============================================
 // FUNCTION 1: CREATE ORGANIZER
@@ -133,7 +134,7 @@ export const getAllOrganizers = async (req, res) => {
 
     // Step 3: Execute query with pagination
     const skip = (page - 1) * limit;
-    
+
     const organizers = await User.find(query)
       .select('-password')  // Exclude password
       .sort({ createdAt: -1 })  // Newest first
@@ -508,5 +509,116 @@ export const getDashboardStats = async (req, res) => {
       message: 'Failed to fetch dashboard statistics',
       error: error.message,
     });
+  }
+};
+
+// ============================================
+// PASSWORD RESET REQUEST MANAGEMENT
+// ============================================
+
+// @desc    Get password reset requests
+// @route   GET /api/admin/password-resets
+// @access  Private (Admin)
+export const getPasswordResetRequests = async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query;
+    const requests = await PasswordResetRequest.find({ status })
+      .populate('user', 'firstName lastName organizerName email')
+      .populate('reviewedBy', 'firstName lastName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests,
+    });
+  } catch (error) {
+    console.error('Get Password Reset Requests Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch requests',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Approve password reset request
+// @route   PUT /api/admin/password-resets/:id/approve
+// @access  Private (Admin)
+export const approvePasswordResetRequest = async (req, res) => {
+  try {
+    const { newPassword, adminNotes } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    const request = await PasswordResetRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already processed' });
+    }
+
+    // Reset the user's password
+    const user = await User.findById(request.user);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Update request
+    request.status = 'approved';
+    request.adminNotes = adminNotes || '';
+    request.reviewedBy = req.user.id;
+    request.reviewedAt = new Date();
+    await request.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset approved and applied',
+    });
+  } catch (error) {
+    console.error('Approve Password Reset Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve request', error: error.message });
+  }
+};
+
+// @desc    Reject password reset request
+// @route   PUT /api/admin/password-resets/:id/reject
+// @access  Private (Admin)
+export const rejectPasswordResetRequest = async (req, res) => {
+  try {
+    const { adminNotes } = req.body;
+
+    const request = await PasswordResetRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already processed' });
+    }
+
+    request.status = 'rejected';
+    request.adminNotes = adminNotes || '';
+    request.reviewedBy = req.user.id;
+    request.reviewedAt = new Date();
+    await request.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Request rejected',
+    });
+  } catch (error) {
+    console.error('Reject Password Reset Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject request', error: error.message });
   }
 };
