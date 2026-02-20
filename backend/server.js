@@ -9,6 +9,7 @@ import adminRoutes from './routes/admin.js';
 import publicRoutes from './routes/public.js';
 import eventRoutes from './routes/events.js';
 import registrationRoutes from './routes/registrations.js';
+import attendanceRoutes from './routes/attendance.js';
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +75,9 @@ app.use('/api/events', eventRoutes);
 
 // Registration routes
 app.use('/api/registrations', registrationRoutes);
+
+// Attendance routes
+app.use('/api/attendance', attendanceRoutes);
 
 // Other routes (to be added)
 // app.use('/api/participants', participantRoutes);

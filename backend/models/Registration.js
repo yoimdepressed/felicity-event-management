@@ -134,11 +134,44 @@ const registrationSchema = new mongoose.Schema(
     attended: {
       type: Boolean,
       default: false,
+      index: true,
     },
 
     attendedAt: {
       type: Date,
       default: null,
+    },
+
+    scannedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User', // Organizer who scanned the QR
+      default: null,
+    },
+
+    scanMethod: {
+      type: String,
+      enum: ['Camera', 'FileUpload', 'Manual', null],
+      default: null,
+    },
+
+    manualOverride: {
+      isOverridden: {
+        type: Boolean,
+        default: false,
+      },
+      reason: {
+        type: String,
+        default: null,
+      },
+      overriddenBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      overriddenAt: {
+        type: Date,
+        default: null,
+      },
     },
 
     // ============================================

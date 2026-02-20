@@ -451,28 +451,29 @@ This project is part of an academic assignment.
 
 ## 🚀 Advanced Features Implemented (30 Marks)
 
-### Tier A Features (Choose 2 - 8 marks each)
-#### ✅ Feature 1: [Feature Name]
-**Justification**: [Why you chose this feature]
-**Implementation**: [Brief technical approach]
+### Tier A Features Implemented:
 
-#### ✅ Feature 2: [Feature Name]
-**Justification**: [Why you chose this feature]
-**Implementation**: [Brief technical approach]
+#### 1. QR Scanner & Attendance Tracking [8 Marks]
+**Selection Rationale:** Addresses a critical pain point in event management—manual attendance tracking is time-consuming and error-prone. QR-based validation provides instant verification, prevents duplicate entries, and generates real-time analytics for organizers to monitor event turnout.
 
-### Tier B Features (Choose 2 - 6 marks each)
-#### ✅ Feature 1: [Feature Name]
-**Justification**: [Why you chose this feature]
-**Implementation**: [Brief technical approach]
+**Technical Approach:** 
+- Leverages browser's native MediaDevices API for camera access (no external SDK)
+- Integrates with existing `qrcode` library for validation
+- Uses `json2csv` for attendance report exports
+- Implements optimistic UI updates for instant feedback
 
-#### ✅ Feature 2: [Feature Name]
-**Justification**: [Why you chose this feature]
-**Implementation**: [Brief technical approach]
+**Design Decision:** Chose browser-based scanning over mobile app to maintain web-first architecture, ensuring cross-platform compatibility without additional development overhead.
 
-### Tier C Features (Choose 1 - 2 marks)
-#### ✅ Feature: [Feature Name]
-**Justification**: [Why you chose this feature]
-**Implementation**: [Brief technical approach]
+#### 2. Merchandise Payment Approval Workflow [8 Marks]
+**Selection Rationale:** Directly addresses the gap between online merchandise ordering and offline payment verification—a common scenario in college fests. Prevents stock mismanagement and builds user trust through transparent status tracking.
+
+**Technical Approach:**
+- Uses `multer` for secure multipart file uploads
+- Integrates `cloudinary` for scalable image storage and CDN delivery
+- Implements state machine pattern (Pending → Approved/Rejected)
+- Conditionally triggers QR generation and email notifications only on approval
+
+**Design Decision:** Opted for admin-approval workflow over automated payment gateway integration to accommodate diverse payment methods (UPI, cash, bank transfer) common in Indian college fests.
 
 ## 📦 Installation & Setup
 

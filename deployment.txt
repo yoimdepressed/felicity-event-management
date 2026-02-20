@@ -5,8 +5,8 @@ Student ID: 2024101006
 ===========================================
 
 PRODUCTION URLS:
-Frontend URL: [TO BE FILLED - Deploy to Vercel/Netlify first]
-Backend API URL: [TO BE FILLED - Deploy to Render/Railway first]
+Frontend URL: https://[YOUR-VERCEL-URL].vercel.app
+Backend API URL: https://felicity-event-management-mjuo.onrender.com/api
 
 Example:
 Frontend URL: https://felicity-2024101006.vercel.app
