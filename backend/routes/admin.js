@@ -9,12 +9,8 @@ import {
   updateOrganizer,
   deleteOrganizer,
   permanentlyDeleteOrganizer,
-  toggleOrganizerActive,
   resetOrganizerPassword,
   getDashboardStats,
-  getPasswordResetRequests,
-  approvePasswordResetRequest,
-  rejectPasswordResetRequest,
 } from '../controllers/adminController.js';
 
 import {
@@ -63,11 +59,6 @@ router.get('/organizers/:id', getOrganizerById);
 // @body    { firstName, lastName, organizerName, category, description, contactEmail, isActive, isApproved }
 router.put('/organizers/:id', updateOrganizer);
 
-// @route   PUT /api/admin/organizers/:id/toggle-active
-// @desc    Enable or disable organizer account
-// @access  Private (Admin only)
-router.put('/organizers/:id/toggle-active', toggleOrganizerActive);
-
 // @route   DELETE /api/admin/organizers/:id
 // @desc    Deactivate organizer account (soft delete)
 // @access  Private (Admin only)
@@ -111,28 +102,6 @@ router.get('/events', getAllEventsAdmin);
 // @desc    Permanently delete event from database
 // @access  Private (Admin only)
 router.delete('/events/:id/permanent', permanentlyDeleteEvent);
-
-// ============================================
-// PASSWORD RESET REQUEST ROUTES
-// ============================================
-
-// @route   GET /api/admin/password-resets
-// @desc    Get all password reset requests
-// @access  Private (Admin only)
-// @query   status (pending|approved|rejected|all)
-router.get('/password-resets', getPasswordResetRequests);
-
-// @route   PUT /api/admin/password-resets/:id/approve
-// @desc    Approve password reset request
-// @access  Private (Admin only)
-// @body    { newPassword, adminNotes }
-router.put('/password-resets/:id/approve', approvePasswordResetRequest);
-
-// @route   PUT /api/admin/password-resets/:id/reject
-// @desc    Reject password reset request
-// @access  Private (Admin only)
-// @body    { adminNotes }
-router.put('/password-resets/:id/reject', rejectPasswordResetRequest);
 
 // ============================================
 // EXPORT ROUTER

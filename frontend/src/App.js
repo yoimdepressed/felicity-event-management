@@ -7,8 +7,6 @@ import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
 import ProfileEdit from './pages/ProfileEdit';
 import AdminDashboard from './pages/AdminDashboard';
-import ManageOrganizers from './pages/ManageOrganizers';
-import PasswordResetRequests from './pages/PasswordResetRequests';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import CreateEvent from './pages/CreateEvent';
@@ -56,24 +54,6 @@ function App() {
             element={
               <PrivateRoute allowedRoles={['admin']}>
                 <AdminDashboard />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/admin/organizers"
-            element={
-              <PrivateRoute allowedRoles={['admin']}>
-                <ManageOrganizers />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/admin/password-resets"
-            element={
-              <PrivateRoute allowedRoles={['admin']}>
-                <PasswordResetRequests />
               </PrivateRoute>
             }
           />

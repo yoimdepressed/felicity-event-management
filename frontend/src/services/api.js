@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// Use environment variable in production, fallback to localhost in development
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -50,12 +49,7 @@ export const adminAPI = {
   getOrganizer: (id) => api.get(`/admin/organizers/${id}`),
   updateOrganizer: (id, data) => api.put(`/admin/organizers/${id}`, data),
   deleteOrganizer: (id) => api.delete(`/admin/organizers/${id}`),
-  toggleOrganizerActive: (id) => api.put(`/admin/organizers/${id}/toggle-active`),
-  permanentlyDeleteOrganizer: (id) => api.delete(`/admin/organizers/${id}/permanent`),
   resetPassword: (id, newPassword) => api.post(`/admin/organizers/${id}/reset-password`, { newPassword }),
-  getPasswordResetRequests: (status = 'pending') => api.get('/admin/password-resets', { params: { status } }),
-  approvePasswordResetRequest: (id, newPassword, adminNotes) => api.put(`/admin/password-resets/${id}/approve`, { newPassword, adminNotes }),
-  rejectPasswordResetRequest: (id, adminNotes) => api.put(`/admin/password-resets/${id}/reject`, { adminNotes }),
 };
 
 export const publicAPI = {

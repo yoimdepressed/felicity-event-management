@@ -1,11 +1,10 @@
 // Import User Model
 import User from '../models/User.js';
-import PasswordResetRequest from '../models/PasswordResetRequest.js';
 
 // ============================================
 // FUNCTION 1: CREATE ORGANIZER
 // ============================================
-// Purpose: Admin creates a new organizer account with auto-generated credentials
+// Purpose: Admin creates a new organizer account
 // Route: POST /api/admin/organizers
 // Access: Private (Admin only)
 
@@ -13,6 +12,10 @@ export const createOrganizer = async (req, res) => {
   try {
     // Step 1: Extract organizer data from request body
     const {
+      firstName,
+      lastName,
+      email,
+      password,
       organizerName,
       category,
       description,
@@ -20,81 +23,31 @@ export const createOrganizer = async (req, res) => {
       discordWebhook,
     } = req.body;
 
-    // Step 2: Basic validation - only organizerName required
-    if (!organizerName || !category || !description || !contactEmail) {
+    // Step 2: Basic validation
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: organizerName, category, description, contactEmail',
+        message: 'Please provide all required fields: firstName, lastName, email, password',
       });
     }
 
-    // Step 3: Auto-generate login email from organizer name
-    // Convert "Sports Committee" -> "sports.committee@felicity.iiit.ac.in"
-    const emailPrefix = organizerName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-      .trim()
-      .replace(/\s+/g, '.'); // Replace spaces with dots
-    
-    let generatedEmail = `${emailPrefix}@felicity.iiit.ac.in`;
-    
-    // Step 4: Check if email already exists, add number if needed
-    let counter = 1;
-    let emailExists = await User.findOne({ email: generatedEmail });
-    while (emailExists) {
-      generatedEmail = `${emailPrefix}${counter}@felicity.iiit.ac.in`;
-      emailExists = await User.findOne({ email: generatedEmail });
-      counter++;
-    }
-
-    // Step 5: Auto-generate secure random password (12 characters)
-    const generatePassword = () => {
-      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-      const numbers = '0123456789';
-      const symbols = '!@#$%^&*';
-      const allChars = uppercase + lowercase + numbers + symbols;
-      
-      let password = '';
-      // Ensure at least one of each type
-      password += uppercase[Math.floor(Math.random() * uppercase.length)];
-      password += lowercase[Math.floor(Math.random() * lowercase.length)];
-      password += numbers[Math.floor(Math.random() * numbers.length)];
-      password += symbols[Math.floor(Math.random() * symbols.length)];
-      
-      // Fill rest randomly
-      for (let i = 4; i < 12; i++) {
-        password += allChars[Math.floor(Math.random() * allChars.length)];
-      }
-      
-      // Shuffle the password
-      return password.split('').sort(() => Math.random() - 0.5).join('');
-    };
-    
-    const generatedPassword = generatePassword();
-
-    // Step 6: Extract firstName and lastName from organizerName
-    const nameParts = organizerName.trim().split(/\s+/);
-    const firstName = nameParts[0] || 'Club';
-    const lastName = nameParts.slice(1).join(' ') || 'Admin';
-
-    // Step 7: Prepare organizer data
+    // Step 3: Prepare organizer data
     const organizerData = {
       firstName,
       lastName,
-      email: generatedEmail,
-      password: generatedPassword,
-      role: 'organizer',
+      email,
+      password,
+      role: 'organizer',  // Force role to be organizer
       organizerName,
       category,
       description,
-      contactEmail,
+      contactEmail: contactEmail || email,  // Use login email if contactEmail not provided
       discordWebhook,
       isActive: true,
       isApproved: true,
     };
 
-    // Step 8: Validate organizer-specific fields using User Model method
+    // Step 4: Validate organizer-specific fields using User Model method
     const validationErrors = User.validateOrganizer(organizerData);
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -104,23 +57,32 @@ export const createOrganizer = async (req, res) => {
       });
     }
 
-    // Step 9: Create organizer in database
+    // Step 5: Check if organizer with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered. Please use a different email.',
+      });
+    }
+
+    // Step 6: Create organizer in database
     // Password will be automatically hashed by User model pre-save middleware
     const organizer = await User.create(organizerData);
 
-    // Step 10: Generate JWT token for the organizer
+    // Step 7: Generate JWT token for the organizer
     const token = organizer.generateToken();
 
-    // Step 11: Send success response with generated credentials
+    // Step 8: Send success response
     res.status(201).json({
       success: true,
-      message: 'Organizer account created successfully with auto-generated credentials',
+      message: 'Organizer account created successfully',
       token,
       organizer: organizer.getPublicProfile(),
       credentials: {
-        email: generatedEmail,
-        password: generatedPassword,  // Plain text password (before hashing) to share with organizer
-        message: 'IMPORTANT: Share these credentials with the organizer. They can log in immediately.'
+        email: organizer.email,
+        temporaryPassword: password,  // Send password to admin so they can share with organizer
+        message: 'Share these credentials with the organizer'
       }
     });
 
@@ -370,53 +332,6 @@ export const deleteOrganizer = async (req, res) => {
 };
 
 // ============================================
-// FUNCTION 5A: TOGGLE ORGANIZER ACTIVE STATUS
-// ============================================
-// Purpose: Admin can enable/disable organizer accounts
-// Route: PUT /api/admin/organizers/:id/toggle-active
-// Access: Private (Admin only)
-
-export const toggleOrganizerActive = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const organizer = await User.findById(id);
-
-    if (!organizer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organizer not found',
-      });
-    }
-
-    if (organizer.role !== 'organizer') {
-      return res.status(400).json({
-        success: false,
-        message: 'User is not an organizer',
-      });
-    }
-
-    // Toggle the active status
-    organizer.isActive = !organizer.isActive;
-    await organizer.save();
-
-    res.status(200).json({
-      success: true,
-      message: `Organizer account ${organizer.isActive ? 'enabled' : 'disabled'} successfully`,
-      organizer: organizer.getPublicProfile(),
-    });
-
-  } catch (error) {
-    console.error('Toggle Organizer Active Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to toggle organizer status',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
 // FUNCTION 6: PERMANENTLY DELETE ORGANIZER
 // ============================================
 // Purpose: Admin permanently removes organizer from database
@@ -591,248 +506,6 @@ export const getDashboardStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard statistics',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
-// FUNCTION 9: REQUEST PASSWORD RESET
-// ============================================
-// Purpose: Admin requests a password reset for an organizer
-// Route: POST /api/admin/organizers/:id/request-password-reset
-// Access: Private (Admin only)
-
-export const requestPasswordReset = async (req, res) => {
-  try {
-    // Step 1: Get organizer ID from URL parameter
-    const { id } = req.params;
-
-    // Step 2: Find organizer by ID
-    const organizer = await User.findById(id);
-
-    // Step 3: Check if organizer exists
-    if (!organizer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Organizer not found',
-      });
-    }
-
-    // Step 4: Generate password reset token (JWT)
-    const resetToken = organizer.generateResetToken();
-
-    // Step 5: Create or update password reset request in database
-    await PasswordResetRequest.findOneAndUpdate(
-      { userId: organizer._id },
-      { token: resetToken, createdAt: Date.now() },
-      { upsert: true }
-    );
-
-    // Step 6: TODO: Send email to organizer with password reset link (containing the token)
-
-    // Step 7: Send success response
-    res.status(200).json({
-      success: true,
-      message: 'Password reset requested successfully. Please check your email for the reset link.',
-    });
-
-  } catch (error) {
-    console.error('Request Password Reset Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to request password reset',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
-// FUNCTION 10: RESET PASSWORD USING TOKEN
-// ============================================
-// Purpose: Organizer resets password using the token from the password reset email
-// Route: POST /api/admin/organizers/reset-password
-// Access: Public
-
-export const resetPasswordUsingToken = async (req, res) => {
-  try {
-    // Step 1: Get token and new password from request body
-    const { token, newPassword } = req.body;
-
-    // Step 2: Validate token and find associated organizer
-    const passwordResetRequest = await PasswordResetRequest.findOne({ token }).populate('userId');
-
-    if (!passwordResetRequest) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired password reset token',
-      });
-    }
-
-    const organizer = passwordResetRequest.userId;
-
-    // Step 3: Update organizer password
-    organizer.password = newPassword;
-    await organizer.save();  // Password will be automatically hashed
-
-    // Step 4: Remove password reset request from database
-    await PasswordResetRequest.findByIdAndDelete(passwordResetRequest._id);
-
-    // Step 5: Send success response
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successfully',
-    });
-
-  } catch (error) {
-    console.error('Reset Password Using Token Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to reset password',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
-// FUNCTION 11: GET ALL PASSWORD RESET REQUESTS
-// ============================================
-// Purpose: Admin gets all password reset requests
-// Route: GET /api/admin/password-resets
-// Access: Private (Admin only)
-
-export const getPasswordResetRequests = async (req, res) => {
-  try {
-    const { status = 'pending' } = req.query;
-
-    const query = status !== 'all' ? { status } : {};
-
-    const requests = await PasswordResetRequest.find(query)
-      .populate('user', 'firstName lastName email role organizerName')
-      .populate('reviewedBy', 'firstName lastName email')
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: requests.length,
-      requests,
-    });
-  } catch (error) {
-    console.error('Get Password Reset Requests Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch password reset requests',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
-// FUNCTION 12: APPROVE PASSWORD RESET REQUEST
-// ============================================
-// Purpose: Admin approves a password reset request
-// Route: PUT /api/admin/password-resets/:id/approve
-// Access: Private (Admin only)
-
-export const approvePasswordResetRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { newPassword, adminNotes } = req.body;
-
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be at least 6 characters',
-      });
-    }
-
-    // Find the request
-    const request = await PasswordResetRequest.findById(id).populate('user');
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Password reset request not found',
-      });
-    }
-
-    if (request.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'This request has already been reviewed',
-      });
-    }
-
-    // Update user password
-    const user = await User.findById(request.user._id).select('+password');
-    user.password = newPassword;
-    await user.save();
-
-    // Update request
-    request.status = 'approved';
-    request.newPassword = newPassword; // Store for admin records
-    request.reviewedBy = req.user.id;
-    request.reviewedAt = new Date();
-    request.adminNotes = adminNotes;
-    await request.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Password reset request approved and password updated',
-      request,
-    });
-  } catch (error) {
-    console.error('Approve Password Reset Request Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to approve password reset request',
-      error: error.message,
-    });
-  }
-};
-
-// ============================================
-// FUNCTION 13: REJECT PASSWORD RESET REQUEST
-// ============================================
-// Purpose: Admin rejects a password reset request
-// Route: PUT /api/admin/password-resets/:id/reject
-// Access: Private (Admin only)
-
-export const rejectPasswordResetRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { adminNotes } = req.body;
-
-    const request = await PasswordResetRequest.findById(id);
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Password reset request not found',
-      });
-    }
-
-    if (request.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'This request has already been reviewed',
-      });
-    }
-
-    request.status = 'rejected';
-    request.reviewedBy = req.user.id;
-    request.reviewedAt = new Date();
-    request.adminNotes = adminNotes;
-    await request.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Password reset request rejected',
-      request,
-    });
-  } catch (error) {
-    console.error('Reject Password Reset Request Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to reject password reset request',
       error: error.message,
     });
   }

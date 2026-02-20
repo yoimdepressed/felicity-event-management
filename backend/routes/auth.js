@@ -12,7 +12,7 @@ import {
 } from '../controllers/authController.js';
 
 // Import middleware
-import { protect } from '../middleware/auth.js';
+import { protect, authorize } from '../middleware/auth.js';
 
 // Create router instance
 const router = express.Router();

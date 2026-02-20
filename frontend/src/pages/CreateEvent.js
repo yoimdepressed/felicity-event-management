@@ -5,7 +5,6 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './CreateEvent.css';
-import FormBuilder from '../components/FormBuilder';
 import {
   Container,
   Box,
@@ -26,9 +25,6 @@ import {
   Paper,
   Divider,
   Checkbox,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -40,7 +36,6 @@ import {
   Inventory,
   ArrowBack,
   CheckCircle,
-  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 
 const CreateEvent = () => {
@@ -49,7 +44,6 @@ const CreateEvent = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [createdEventId, setCreatedEventId] = useState(null);
 
   const [formData, setFormData] = useState({
     eventName: '',
@@ -151,6 +145,38 @@ const CreateEvent = () => {
     setFormData({
       ...formData,
       tags: formData.tags.filter((t) => t !== tagToRemove),
+    });
+  };
+
+  const handleAddCustomField = () => {
+    const newField = {
+      fieldName: `field${Date.now()}`,
+      fieldType: 'text',
+      fieldLabel: '',
+      options: [],
+      required: false,
+      placeholder: '',
+    };
+    setFormData({
+      ...formData,
+      customRegistrationForm: [...formData.customRegistrationForm, newField],
+    });
+  };
+
+  const handleRemoveCustomField = (index) => {
+    const updated = formData.customRegistrationForm.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      customRegistrationForm: updated,
+    });
+  };
+
+  const handleCustomFieldChange = (index, field, value) => {
+    const updated = [...formData.customRegistrationForm];
+    updated[index][field] = value;
+    setFormData({
+      ...formData,
+      customRegistrationForm: updated,
     });
   };
 
@@ -256,17 +282,9 @@ const CreateEvent = () => {
           ? 'Event created and published successfully!' 
           : 'Event saved as draft successfully!';
         setSuccess(message);
-        setCreatedEventId(response.data.data._id); // Store event ID for FormBuilder
-        
-        // Only navigate away if publishing or Merchandise
-        if (actionType === 'Published' || formData.eventType === 'Merchandise') {
-          setTimeout(() => {
-            navigate('/organizer/my-events');
-          }, 2000);
-        } else {
-          // For Draft Normal events, show FormBuilder
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
+        setTimeout(() => {
+          navigate('/organizer/my-events');
+        }, 2000);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to create event');
@@ -777,84 +795,142 @@ const CreateEvent = () => {
             )}
 
             {/* Custom Registration Form - Only for Normal Events */}
-            {formData.eventType === 'Normal' && createdEventId && (
+            {formData.eventType === 'Normal' && (
               <>
-                <Divider sx={{ my: 4 }} />
+                <Divider sx={{ my: 3 }} />
                 <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   Custom Registration Form (Optional)
                 </Typography>
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                  Add custom fields to collect additional information from participants.
-                  The form will be locked after the first registration.
-                </Typography>
-                <Paper elevation={2} sx={{ p: 3, borderRadius: 2, bgcolor: 'grey.50' }}>
-                  <FormBuilder 
-                    eventId={createdEventId} 
-                    onSave={() => console.log('Form saved successfully')}
-                  />
-                </Paper>
-              </>
-            )}
-
-            {/* Helper message for draft events */}
-            {formData.eventType === 'Normal' && !createdEventId && (
-              <>
-                <Divider sx={{ my: 3 }} />
-                <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.50', borderRadius: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    💡 <strong>Tip:</strong> Save as Draft first to access the Custom Registration Form Builder
-                  </Typography>
-                </Paper>
+            <Grid container spacing={3} mb={4}>
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  onClick={handleAddCustomField}
+                  sx={{ borderRadius: 2, fontWeight: 500 }}
+                >
+                  + Add Custom Field
+                </Button>
+              </Grid>
+              {formData.customRegistrationForm.map((field, index) => (
+                <Grid item xs={12} key={index}>
+                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={8}>
+                        <TextField
+                          fullWidth
+                          label={`Field ${index + 1} Label`}
+                          value={field.fieldLabel}
+                          onChange={(e) => handleCustomFieldChange(index, 'fieldLabel', e.target.value)}
+                          placeholder="e.g., Dietary Preferences, Accommodation Needed"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <Description />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <FormControl fullWidth>
+                          <FormLabel sx={{ mb: 1, fontWeight: 'bold', color: 'text.primary' }}>
+                            Field Type
+                          </FormLabel>
+                          <RadioGroup
+                            row
+                            name={`fieldType-${index}`}
+                            value={field.fieldType}
+                            onChange={(e) => handleCustomFieldChange(index, 'fieldType', e.target.value)}
+                          >
+                            <FormControlLabel
+                              value="text"
+                              control={<Radio />}
+                              label="Short Answer"
+                            />
+                            <FormControlLabel
+                              value="textarea"
+                              control={<Radio />}
+                              label="Long Answer"
+                            />
+                            <FormControlLabel
+                              value="number"
+                              control={<Radio />}
+                              label="Number"
+                            />
+                            <FormControlLabel
+                              value="email"
+                              control={<Radio />}
+                              label="Email"
+                            />
+                            <FormControlLabel
+                              value="phone"
+                              control={<Radio />}
+                              label="Phone"
+                            />
+                          </RadioGroup>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={field.required}
+                              onChange={(e) => handleCustomFieldChange(index, 'required', e.target.checked)}
+                              color="primary"
+                            />
+                          }
+                          label="Required"
+                          sx={{ mb: 2 }}
+                        />
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleRemoveCustomField(index)}
+                          sx={{ borderRadius: 2, fontWeight: 500 }}
+                        >
+                          Remove Field
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
               </>
             )}
 
             {/* Submit Buttons */}
             <Box display="flex" gap={2} mt={4}>
-              {!createdEventId ? (
-                <>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    disabled={loading}
-                    fullWidth
-                    onClick={(e) => handleSubmit(e, 'Draft')}
-                    sx={{ py: 1.5, fontWeight: 600 }}
-                  >
-                    {loading ? 'Saving...' : 'Save as Draft'}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    disabled={loading}
-                    fullWidth
-                    onClick={(e) => handleSubmit(e, 'Published')}
-                    sx={{ py: 1.5, fontWeight: 600 }}
-                  >
-                    {loading ? 'Publishing...' : 'Create & Publish'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="large"
-                    onClick={() => navigate('/organizer/my-events')}
-                    disabled={loading}
-                    sx={{ py: 1.5, fontWeight: 600, minWidth: 120 }}
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  onClick={() => navigate('/organizer/my-events')}
-                  sx={{ py: 1.5, fontWeight: 600 }}
-                  startIcon={<CheckCircle />}
-                >
-                  Done - Go to My Events
-                </Button>
-              )}
+              <Button
+                variant="outlined"
+                size="large"
+                disabled={loading}
+                fullWidth
+                onClick={(e) => handleSubmit(e, 'Draft')}
+                sx={{ py: 1.5, fontWeight: 600 }}
+              >
+                {loading ? 'Saving...' : 'Save as Draft'}
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                disabled={loading}
+                fullWidth
+                onClick={(e) => handleSubmit(e, 'Published')}
+                sx={{ py: 1.5, fontWeight: 600 }}
+              >
+                {loading ? 'Publishing...' : 'Create & Publish'}
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="large"
+                onClick={() => navigate('/organizer/my-events')}
+                disabled={loading}
+                sx={{ py: 1.5, fontWeight: 600, minWidth: 120 }}
+              >
+                Cancel
+              </Button>
             </Box>
           </form>
         </CardContent>

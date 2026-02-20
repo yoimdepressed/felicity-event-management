@@ -67,6 +67,7 @@ export const protect = async (req, res, next) => {
       // Now any route using this middleware can access req.user
       req.user = {
         id: user._id,
+        _id: user._id,
         role: user.role,
         email: user.email,
         firstName: user.firstName,
@@ -175,6 +176,7 @@ export const optionalAuth = async (req, res, next) => {
         // Attach user if found and active
         req.user = {
           id: user._id,
+          _id: user._id,
           role: user.role,
           email: user.email,
           firstName: user.firstName,

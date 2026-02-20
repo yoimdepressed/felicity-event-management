@@ -268,8 +268,7 @@ export const updateProfile = async (req, res) => {
       if (category) user.category = category;
       if (description) user.description = description;
       if (contactEmail) user.contactEmail = contactEmail;
-      if (contactNumber !== undefined) user.contactNumber = contactNumber; // Allow clearing
-      if (discordWebhook !== undefined) user.discordWebhook = discordWebhook; // Allow clearing webhook
+      if (discordWebhook) user.discordWebhook = discordWebhook;
     }
 
     // Step 5: Save updated user
