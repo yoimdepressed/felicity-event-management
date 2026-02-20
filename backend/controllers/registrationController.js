@@ -26,7 +26,7 @@ const sendTicketEmail = async (registration, participant, event) => {
     const qrCodeImage = await QRCode.toDataURL(qrCodeData);
 
     const eventType = event.eventType === 'Merchandise' ? 'Purchase' : 'Registration';
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER || 'felicity@example.com',
       to: participant.email,
@@ -42,9 +42,9 @@ const sendTicketEmail = async (registration, participant, event) => {
             <p><strong>Event:</strong> ${event.eventName}</p>
             <p><strong>Type:</strong> ${event.eventType}</p>
             <p><strong>Venue:</strong> ${event.venue}</p>
-            <p><strong>Date:</strong> ${new Date(event.eventStartDate).toLocaleDateString('en-US', { 
-              year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            })}</p>
+            <p><strong>Date:</strong> ${new Date(event.eventStartDate).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      })}</p>
             ${event.eventType === 'Merchandise' && registration.merchandiseDetails ? `
               <p><strong>Size:</strong> ${registration.merchandiseDetails.size || 'N/A'}</p>
               <p><strong>Color:</strong> ${registration.merchandiseDetails.color || 'N/A'}</p>
@@ -100,7 +100,7 @@ export const registerForEvent = async (req, res) => {
 
     // Step 1: Validate event exists
     const event = await Event.findById(eventId).populate('organizer', 'organizerName contactEmail');
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -133,7 +133,7 @@ export const registerForEvent = async (req, res) => {
 
     // Step 4: Check if user already registered
     const existingRegistration = await Registration.isRegistered(req.user.id, eventId);
-    
+
     if (existingRegistration) {
       return res.status(400).json({
         success: false,
@@ -154,7 +154,7 @@ export const registerForEvent = async (req, res) => {
     // Step 6: Check stock for Merchandise
     if (event.eventType === 'Merchandise') {
       const quantity = merchandiseDetails?.quantity || 1;
-      
+
       if (event.availableStock !== null && event.availableStock < quantity) {
         return res.status(400).json({
           success: false,
@@ -171,7 +171,7 @@ export const registerForEvent = async (req, res) => {
         });
 
         const totalQuantity = userPurchases + quantity;
-        
+
         if (totalQuantity > event.purchaseLimitPerParticipant) {
           return res.status(400).json({
             success: false,
@@ -182,12 +182,13 @@ export const registerForEvent = async (req, res) => {
     }
 
     // Step 7: Create registration
+    const isMerchWithPrice = event.eventType === 'Merchandise' && event.price > 0;
     const registrationData = {
       participant: req.user.id,
       event: eventId,
-      registrationStatus: 'Confirmed',
-      paymentStatus: event.price > 0 ? 'Pending' : 'Completed',
-      amountPaid: event.price || 0,
+      registrationStatus: isMerchWithPrice ? 'PendingApproval' : 'Confirmed',
+      paymentStatus: isMerchWithPrice ? 'Pending' : (event.price > 0 ? 'Pending' : 'Completed'),
+      amountPaid: (merchandiseDetails?.quantity || 1) * (event.price || 0),
       paymentMethod: event.price > 0 ? 'Pending' : 'Free',
     };
 
@@ -206,29 +207,33 @@ export const registerForEvent = async (req, res) => {
 
     const registration = await Registration.create(registrationData);
 
-    // Step 8: Generate QR code
-    try {
-      const qrCodeData = registration.getQRData();
-      const qrCodeImage = await QRCode.toDataURL(qrCodeData);
-      registration.qrCode = qrCodeImage;
-      await registration.save();
-    } catch (qrError) {
-      console.error('QR Code generation failed:', qrError);
+    // Step 8: Generate QR code ONLY for confirmed registrations (NOT PendingApproval)
+    if (registration.registrationStatus === 'Confirmed') {
+      try {
+        const qrCodeData = registration.getQRData();
+        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+        registration.qrCode = qrCodeImage;
+        await registration.save();
+      } catch (qrError) {
+        console.error('QR Code generation failed:', qrError);
+      }
     }
 
-    // Step 9: Update event stats
-    event.currentRegistrations += merchandiseDetails?.quantity || 1;
-    
-    // Decrement stock for merchandise
-    if (event.eventType === 'Merchandise' && event.availableStock !== null) {
-      event.availableStock -= merchandiseDetails?.quantity || 1;
+    // Step 9: Update event stats ONLY for confirmed (not PendingApproval)
+    if (registration.registrationStatus === 'Confirmed') {
+      event.currentRegistrations += merchandiseDetails?.quantity || 1;
+
+      // Decrement stock for merchandise
+      if (event.eventType === 'Merchandise' && event.availableStock !== null) {
+        event.availableStock -= merchandiseDetails?.quantity || 1;
+      }
     }
-    
+
     // Lock form after first registration (for Normal events with custom forms)
     if (event.eventType === 'Normal' && !event.formLocked && event.customRegistrationForm.length > 0) {
       await event.lockForm();
     }
-    
+
     await event.save();
 
     // Step 10: Get participant details
@@ -310,13 +315,13 @@ export const getMyRegistrations = async (req, res) => {
 
     // Separate upcoming and past events
     const now = new Date();
-    
+
     if (tab === 'upcoming') {
-      registrations = registrations.filter(reg => 
+      registrations = registrations.filter(reg =>
         reg.event && new Date(reg.event.eventStartDate) > now
       );
     } else if (tab === 'completed') {
-      registrations = registrations.filter(reg => 
+      registrations = registrations.filter(reg =>
         reg.event && new Date(reg.event.eventEndDate) < now
       );
     }
@@ -420,12 +425,12 @@ export const cancelRegistration = async (req, res) => {
     // Update event stats
     if (registration.event) {
       registration.event.currentRegistrations -= registration.merchandiseDetails?.quantity || 1;
-      
+
       // Restore stock for merchandise
       if (registration.event.eventType === 'Merchandise' && registration.event.availableStock !== null) {
         registration.event.availableStock += registration.merchandiseDetails?.quantity || 1;
       }
-      
+
       await registration.event.save();
     }
 
@@ -459,7 +464,7 @@ export const getEventRegistrations = async (req, res) => {
 
     // Check if event exists and belongs to organizer
     const event = await Event.findById(eventId);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,

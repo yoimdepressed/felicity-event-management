@@ -22,9 +22,7 @@ import {
   Grid,
   InputAdornment,
   Chip,
-  Paper,
   Divider,
-  Checkbox,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -56,7 +54,6 @@ import {
 const EditEvent = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetchingEvent, setFetchingEvent] = useState(true);
   const [error, setError] = useState('');
@@ -101,11 +98,11 @@ const EditEvent = () => {
   const fetchEventAndPermissions = async () => {
     try {
       setFetchingEvent(true);
-      
+
       // Fetch event details
       const eventResponse = await api.get(`/events/${id}`);
       const event = eventResponse.data.data;
-      
+
       // Fetch permissions
       const permissionsResponse = await api.get(`/events/${id}/permissions`);
       setPermissions(permissionsResponse.data.data.permissions);
@@ -381,20 +378,20 @@ const EditEvent = () => {
             <Typography variant="h4" sx={{ fontWeight: 600 }}>
               Edit Event
             </Typography>
-            <Chip 
-              label={formData.status} 
-              size="small" 
+            <Chip
+              label={formData.status}
+              size="small"
               color={
                 formData.status === 'Draft' ? 'default' :
-                formData.status === 'Published' ? 'primary' :
-                formData.status === 'Ongoing' ? 'warning' :
-                formData.status === 'Completed' ? 'success' : 'error'
+                  formData.status === 'Published' ? 'primary' :
+                    formData.status === 'Ongoing' ? 'warning' :
+                      formData.status === 'Completed' ? 'success' : 'error'
               }
               sx={{ mt: 1 }}
             />
           </Box>
         </Box>
-        
+
         {/* Status Action Buttons */}
         <Box display="flex" gap={1}>
           {permissions?.canPublish && (
@@ -435,8 +432,8 @@ const EditEvent = () => {
 
       {/* Permissions Info */}
       {permissions && (
-        <Alert 
-          severity={permissions.canEdit ? "info" : "warning"} 
+        <Alert
+          severity={permissions.canEdit ? "info" : "warning"}
           sx={{ mb: 3 }}
           icon={permissions.canEdit ? <LockOpen /> : <Lock />}
         >
@@ -789,8 +786,8 @@ const EditEvent = () => {
                     onKeyPress={(e) => e.key === 'Enter' && handleAddCustomTag()}
                     disabled={!isFieldEditable('tags')}
                   />
-                  <Button 
-                    variant="outlined" 
+                  <Button
+                    variant="outlined"
                     onClick={handleAddCustomTag}
                     disabled={!isFieldEditable('tags')}
                   >
@@ -816,7 +813,7 @@ const EditEvent = () => {
               {formData.eventType === 'Normal' && (
                 <Grid item xs={12}>
                   <Accordion>
-                    <AccordionSummary 
+                    <AccordionSummary
                       expandIcon={<ExpandMoreIcon />}
                       sx={{ bgcolor: 'grey.50' }}
                     >
@@ -825,26 +822,26 @@ const EditEvent = () => {
                           Custom Registration Form
                         </Typography>
                         {formData.formLocked && (
-                          <Chip 
-                            icon={<Lock />} 
-                            label="Locked" 
-                            color="error" 
-                            size="small" 
+                          <Chip
+                            icon={<Lock />}
+                            label="Locked"
+                            color="error"
+                            size="small"
                           />
                         )}
                         {!formData.formLocked && (
-                          <Chip 
-                            icon={<LockOpen />} 
-                            label="Editable" 
-                            color="success" 
-                            size="small" 
+                          <Chip
+                            icon={<LockOpen />}
+                            label="Editable"
+                            color="success"
+                            size="small"
                           />
                         )}
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails>
-                      <FormBuilder 
-                        eventId={id} 
+                      <FormBuilder
+                        eventId={id}
                         onSave={fetchEventAndPermissions}
                       />
                     </AccordionDetails>

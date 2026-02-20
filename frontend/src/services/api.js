@@ -52,6 +52,9 @@ export const adminAPI = {
   updateOrganizer: (id, data) => api.put(`/admin/organizers/${id}`, data),
   deleteOrganizer: (id) => api.delete(`/admin/organizers/${id}`),
   resetPassword: (id, newPassword) => api.post(`/admin/organizers/${id}/reset-password`, { newPassword }),
+  getPasswordResetRequests: (status) => api.get('/admin/password-resets', { params: { status } }),
+  approvePasswordResetRequest: (id, data) => api.put(`/admin/password-resets/${id}/approve`, data),
+  rejectPasswordResetRequest: (id, data) => api.put(`/admin/password-resets/${id}/reject`, data),
 };
 
 export const publicAPI = {

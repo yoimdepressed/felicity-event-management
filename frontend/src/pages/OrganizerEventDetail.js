@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AttendanceDashboard from './AttendanceDashboard';
 import FeedbackSection from '../components/FeedbackSection';
+import PaymentApprovals from '../components/PaymentApprovals';
+import DiscussionForum from '../components/DiscussionForum';
 import {
   Container,
   Box,
@@ -27,34 +29,26 @@ import {
   FormControl,
   Select,
   MenuItem,
-  Checkbox,
-  IconButton,
-  Tooltip,
   Tabs,
   Tab,
 } from '@mui/material';
 import {
   ArrowBack,
   Edit,
-  Delete,
   Event as EventIcon,
   CalendarToday,
   LocationOn,
   People,
   AttachMoney,
-  TrendingUp,
   Assessment,
   Search,
-  FilterList,
   GetApp,
   CheckCircle,
   Cancel,
   Person,
   Email,
-  Payment,
   Group,
   Schedule,
-  LocalOffer,
   Inventory,
   QrCode2,
 } from '@mui/icons-material';
@@ -341,6 +335,8 @@ const OrganizerEventDetail = () => {
             <Tab label="Participants" icon={<People />} iconPosition="start" />
             <Tab label="Attendance" icon={<QrCode2 />} iconPosition="start" />
             <Tab label="Feedback" icon={<Assessment />} iconPosition="start" />
+            <Tab label="Payments" iconPosition="start" />
+            <Tab label="Discussion" iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -1010,6 +1006,20 @@ const OrganizerEventDetail = () => {
         {tabValue === 4 && (
           <Box>
             <FeedbackSection eventId={id} isOrganizer={true} />
+          </Box>
+        )}
+
+        {/* Tab 5: Payment Approvals (Merchandise) */}
+        {tabValue === 5 && (
+          <Box>
+            <PaymentApprovals eventId={id} />
+          </Box>
+        )}
+
+        {/* Tab 6: Discussion Forum */}
+        {tabValue === 6 && (
+          <Box>
+            <DiscussionForum eventId={id} />
           </Box>
         )}
       </Container>

@@ -17,7 +17,6 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  Person as PersonIcon,
   Email as EmailIcon,
   Category as CategoryIcon,
   Description as DescriptionIcon,
@@ -78,7 +77,7 @@ const OrganizerDetailPage = () => {
   // Filter events by tab
   const getFilteredEvents = () => {
     const now = new Date();
-    
+
     if (activeTab === 0) {
       // Upcoming events (event start date is in the future)
       return events.filter(event => new Date(event.eventStartDate) >= now);

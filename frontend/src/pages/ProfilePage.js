@@ -21,7 +21,6 @@ import {
   DialogContent,
   DialogActions,
   Autocomplete,
-  IconButton,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -34,7 +33,6 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Verified as VerifiedIcon,
-  Add as AddIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
@@ -61,7 +59,7 @@ const INTEREST_OPTIONS = [
 ];
 
 const ProfilePage = () => {
-  const { user: authUser, updateUser, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
   // State
@@ -114,7 +112,7 @@ const ProfilePage = () => {
       const user = response.data.user;
 
       // Extract club IDs - handle both populated objects and plain IDs
-      const clubIds = (user.followedClubs || []).map(club => 
+      const clubIds = (user.followedClubs || []).map(club =>
         typeof club === 'string' ? club : club._id
       );
 
@@ -156,7 +154,7 @@ const ProfilePage = () => {
       setSuccess('');
 
       await api.put('/auth/profile', profileData);
-      
+
       // Refresh user data from backend to get populated followedClubs
       if (refreshUser) {
         await refreshUser();
@@ -164,7 +162,7 @@ const ProfilePage = () => {
 
       setSuccess('Profile updated successfully!');
       setEditMode(false);
-      
+
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Error updating profile:', err);
@@ -206,7 +204,7 @@ const ProfilePage = () => {
       });
 
       setPasswordSuccess('Password changed successfully!');
-      
+
       setTimeout(() => {
         setPasswordDialog(false);
         setPasswordData({
@@ -240,8 +238,8 @@ const ProfilePage = () => {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       {/* Back Button */}
-      <Button 
-        startIcon={<BackIcon />} 
+      <Button
+        startIcon={<BackIcon />}
         onClick={() => navigate('/participant')}
         variant="outlined"
         sx={{ mb: 2 }}
@@ -440,7 +438,7 @@ const ProfilePage = () => {
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Followed Clubs
             </Typography>
-            
+
             {editMode ? (
               <>
                 {/* Search/Add Clubs in Edit Mode */}
@@ -457,9 +455,9 @@ const ProfilePage = () => {
                     });
                   }}
                   renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      label="Search and select clubs" 
+                    <TextField
+                      {...params}
+                      label="Search and select clubs"
                       placeholder="Type to search clubs..."
                       helperText="Search for clubs by name and click to add/remove"
                     />

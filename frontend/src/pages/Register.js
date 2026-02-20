@@ -47,10 +47,10 @@ const Register = () => {
     setLoading(true);
 
     if (formData.participantType === 'IIIT') {
-      const isIIITEmail = formData.email.endsWith('@iiit.ac.in') || 
-                          formData.email.endsWith('@students.iiit.ac.in') || 
-                          formData.email.endsWith('@research.iiit.ac.in');
-      
+      const isIIITEmail = formData.email.endsWith('@iiit.ac.in') ||
+        formData.email.endsWith('@students.iiit.ac.in') ||
+        formData.email.endsWith('@research.iiit.ac.in');
+
       if (!isIIITEmail) {
         setError('IIIT students must use college email (@iiit.ac.in, @students.iiit.ac.in, or @research.iiit.ac.in)');
         setLoading(false);
@@ -60,7 +60,7 @@ const Register = () => {
 
     const submitData = {
       ...formData,
-      college: formData.participantType === 'IIIT' ? 'IIIT Hyderabad' : formData.college
+      college: formData.participantType === 'IIIT' ? 'IIIT Hyderabad' : formData.college,
     };
 
     try {
@@ -130,8 +130,8 @@ const Register = () => {
                 margin="normal"
                 autoComplete="off"
                 helperText={
-                  formData.participantType === 'IIIT' 
-                    ? 'Use your college email (@iiit.ac.in, @students.iiit.ac.in, or @research.iiit.ac.in)' 
+                  formData.participantType === 'IIIT'
+                    ? 'Use your college email (@iiit.ac.in, @students.iiit.ac.in, or @research.iiit.ac.in)'
                     : 'Use your email address'
                 }
               />

@@ -60,17 +60,17 @@ const OrganizerDashboard = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       // Fetch all events
       const eventsResponse = await api.get('/events/my-events');
-      
+
       if (eventsResponse.data.success) {
         const allEvents = eventsResponse.data.data.filter(event => event.isActive !== false);
         setEvents(allEvents);
 
         // Filter completed events (ended events)
         const now = new Date();
-        const completed = allEvents.filter(event => 
+        const completed = allEvents.filter(event =>
           new Date(event.eventEndDate) < now
         );
         setCompletedEvents(completed);
@@ -93,7 +93,7 @@ const OrganizerDashboard = () => {
 
     completedEvts.forEach(event => {
       totalRegs += event.currentRegistrations || 0;
-      
+
       if (event.eventType === 'Merchandise') {
         totalSales += event.currentRegistrations || 0;
         totalRev += (event.price || 0) * (event.currentRegistrations || 0);
@@ -102,8 +102,8 @@ const OrganizerDashboard = () => {
       }
     });
 
-    const avgAttendance = completedEvts.length > 0 
-      ? Math.round(totalRegs / completedEvts.length) 
+    const avgAttendance = completedEvts.length > 0
+      ? Math.round(totalRegs / completedEvts.length)
       : 0;
 
     setAnalytics({
@@ -132,7 +132,7 @@ const OrganizerDashboard = () => {
   };
 
   const handleNext = () => {
-    setCarouselIndex(prev => 
+    setCarouselIndex(prev =>
       Math.min(events.length - itemsPerPage, prev + itemsPerPage)
     );
   };
@@ -187,9 +187,9 @@ const OrganizerDashboard = () => {
                   <Assessment sx={{ mr: 1, verticalAlign: 'middle' }} />
                   Event Analytics
                 </Typography>
-                <Chip 
-                  label={`${completedEvents.length} Completed Events`} 
-                  color="success" 
+                <Chip
+                  label={`${completedEvents.length} Completed Events`}
+                  color="success"
                   icon={<CheckCircle />}
                 />
               </Box>
@@ -197,8 +197,8 @@ const OrganizerDashboard = () => {
               <Grid container spacing={3}>
                 {/* Total Registrations */}
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       boxShadow: 3,
@@ -222,8 +222,8 @@ const OrganizerDashboard = () => {
 
                 {/* Total Revenue */}
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                       color: 'white',
                       boxShadow: 3,
@@ -247,8 +247,8 @@ const OrganizerDashboard = () => {
 
                 {/* Total Sales (Merchandise) */}
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                       color: 'white',
                       boxShadow: 3,
@@ -272,8 +272,8 @@ const OrganizerDashboard = () => {
 
                 {/* Average Attendance */}
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
                       color: 'white',
                       boxShadow: 3,
@@ -334,8 +334,8 @@ const OrganizerDashboard = () => {
                                     Revenue
                                   </Typography>
                                 </Box>
-                                <Chip 
-                                  label={event.eventType} 
+                                <Chip
+                                  label={event.eventType}
                                   size="small"
                                   color={event.eventType === 'Normal' ? 'primary' : 'secondary'}
                                 />
@@ -418,8 +418,8 @@ const OrganizerDashboard = () => {
                         const status = getEventStatus(event);
                         return (
                           <Grid item xs={12} md={4} key={event._id}>
-                            <Card 
-                              sx={{ 
+                            <Card
+                              sx={{
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -433,13 +433,13 @@ const OrganizerDashboard = () => {
                             >
                               <CardContent sx={{ flexGrow: 1 }}>
                                 <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
-                                  <Chip 
-                                    label={status.label} 
+                                  <Chip
+                                    label={status.label}
                                     color={status.color}
                                     size="small"
                                   />
-                                  <Chip 
-                                    label={event.eventType} 
+                                  <Chip
+                                    label={event.eventType}
                                     size="small"
                                     variant="outlined"
                                   />
@@ -489,7 +489,7 @@ const OrganizerDashboard = () => {
                                 <Button
                                   size="small"
                                   startIcon={<Edit />}
-                                  onClick={() => navigate(`/organizer/edit-event/${event._id}`)}
+                                  onClick={() => navigate(`/organizer/event/${event._id}/edit`)}
                                 >
                                   Edit
                                 </Button>

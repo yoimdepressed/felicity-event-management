@@ -12,7 +12,6 @@ import {
   Checkbox,
   FormControlLabel,
   Grid,
-  Divider,
   Alert,
 } from '@mui/material';
 

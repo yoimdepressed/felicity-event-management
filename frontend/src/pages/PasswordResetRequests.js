@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { adminAPI } from '../services/api';
+import api from '../services/api';
 import {
     Container,
     Box,
@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, CheckCircle, Cancel } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+
 
 const PasswordResetRequests = () => {
     const navigate = useNavigate();

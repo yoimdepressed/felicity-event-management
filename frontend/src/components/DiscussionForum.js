@@ -1,493 +1,341 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { discussionAPI } from '../services/api';
 import {
-    Box,
-    Typography,
-    TextField,
-    Button,
-    Card,
-    CardContent,
-    Chip,
-    IconButton,
-    Tooltip,
-    Alert,
-    CircularProgress,
-    Divider,
+    Box, Typography, TextField, Button, Paper, Avatar, Chip,
+    IconButton, Divider, Alert, CircularProgress, Menu, MenuItem,
     Collapse,
-    Avatar,
-    Stack,
-    Paper,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
 } from '@mui/material';
 import {
-    Send,
-    Reply,
-    Delete,
-    PushPin,
-    Campaign,
-    ThumbUp,
-    Favorite,
-    EmojiEmotions,
-    ExpandMore,
-    ExpandLess,
-    Refresh,
-    Forum,
+    Send, PushPin, Delete, Reply, EmojiEmotions, Campaign,
+    ExpandMore, ExpandLess,
 } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
+import { discussionAPI } from '../services/api';
 
-const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👏'];
+const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👎'];
 
-const DiscussionForum = ({ eventId, isOrganizer = false }) => {
+const DiscussionForum = ({ eventId }) => {
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [newMessage, setNewMessage] = useState('');
+    const [announcement, setAnnouncement] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [replyTo, setReplyTo] = useState(null);
     const [replyContent, setReplyContent] = useState('');
-    const [expandedThreads, setExpandedThreads] = useState({});
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
-    const [announcementDialog, setAnnouncementDialog] = useState(false);
-    const [announcementContent, setAnnouncementContent] = useState('');
-    const [posting, setPosting] = useState(false);
+    const [emojiAnchor, setEmojiAnchor] = useState({ el: null, msgId: null });
+    const [expandedReplies, setExpandedReplies] = useState({});
 
-    const fetchMessages = useCallback(async () => {
+    const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
+
+    const fetchMessages = useCallback(async (silent = false) => {
         try {
-            setError('');
+            if (!silent) setLoading(true);
             const response = await discussionAPI.getMessages(eventId);
             if (response.data.success) {
                 setMessages(response.data.data);
             }
         } catch (err) {
-            if (err.response?.status === 403) {
-                setError('You must be registered for this event to access the discussion forum.');
-            } else {
-                setError('Failed to load discussion messages');
+            if (!silent) {
+                if (err.response?.status === 403) {
+                    setError('You must be registered for this event to access the discussion.');
+                } else {
+                    setError('Failed to load discussion');
+                }
             }
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [eventId]);
 
     useEffect(() => {
         fetchMessages();
-        // Poll for new messages every 10 seconds
-        const interval = setInterval(fetchMessages, 10000);
+        const interval = setInterval(() => fetchMessages(true), 15000);
         return () => clearInterval(interval);
     }, [fetchMessages]);
 
     const handlePostMessage = async () => {
         if (!newMessage.trim()) return;
-        setPosting(true);
         try {
-            await discussionAPI.postMessage(eventId, newMessage.trim());
+            await discussionAPI.postMessage(eventId, { content: newMessage });
             setNewMessage('');
-            await fetchMessages();
+            fetchMessages(true);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to post message');
-        } finally {
-            setPosting(false);
-        }
-    };
-
-    const handlePostReply = async (parentId) => {
-        if (!replyContent.trim()) return;
-        setPosting(true);
-        try {
-            await discussionAPI.postMessage(eventId, replyContent.trim(), parentId);
-            setReplyContent('');
-            setReplyTo(null);
-            setExpandedThreads(prev => ({ ...prev, [parentId]: true }));
-            await fetchMessages();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to post reply');
-        } finally {
-            setPosting(false);
         }
     };
 
     const handlePostAnnouncement = async () => {
-        if (!announcementContent.trim()) return;
+        if (!announcement.trim()) return;
         try {
-            await discussionAPI.postAnnouncement(eventId, announcementContent.trim());
-            setAnnouncementContent('');
-            setAnnouncementDialog(false);
-            setSuccess('Announcement posted!');
-            setTimeout(() => setSuccess(''), 3000);
-            await fetchMessages();
+            const response = await discussionAPI.postMessage(eventId, { content: announcement });
+            if (response.data.data?._id) {
+                try { await discussionAPI.pinMessage(response.data.data._id); } catch (e) { /* ignore */ }
+            }
+            setAnnouncement('');
+            fetchMessages(true);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to post announcement');
         }
     };
 
-    const handleDelete = async (messageId) => {
-        if (!window.confirm('Are you sure you want to delete this message?')) return;
+    const handleReply = async (parentId) => {
+        if (!replyContent.trim()) return;
+        try {
+            await discussionAPI.postMessage(eventId, {
+                content: replyContent,
+                parentMessage: parentId,
+            });
+            setReplyTo(null);
+            setReplyContent('');
+            fetchMessages(true);
+        } catch (err) {
+            setError('Failed to post reply');
+        }
+    };
+
+    const handleDeleteMessage = async (messageId) => {
         try {
             await discussionAPI.deleteMessage(messageId);
-            await fetchMessages();
+            fetchMessages(true);
         } catch (err) {
             setError('Failed to delete message');
         }
     };
 
-    const handleTogglePin = async (messageId) => {
+    const handlePinMessage = async (messageId) => {
         try {
-            await discussionAPI.togglePin(messageId);
-            await fetchMessages();
+            await discussionAPI.pinMessage(messageId);
+            fetchMessages(true);
         } catch (err) {
-            setError('Failed to toggle pin');
+            setError('Failed to pin/unpin message');
         }
     };
 
     const handleReaction = async (messageId, emoji) => {
         try {
-            await discussionAPI.toggleReaction(messageId, emoji);
-            await fetchMessages();
+            await discussionAPI.reactToMessage(messageId, emoji);
+            setEmojiAnchor({ el: null, msgId: null });
+            fetchMessages(true);
         } catch (err) {
-            setError('Failed to add reaction');
+            console.error('Reaction error:', err);
         }
     };
 
-    const toggleThread = (messageId) => {
-        setExpandedThreads(prev => ({
-            ...prev,
-            [messageId]: !prev[messageId],
-        }));
+    const toggleReplies = (msgId) => {
+        setExpandedReplies(prev => ({ ...prev, [msgId]: !prev[msgId] }));
     };
 
-    const getInitials = (msg) => {
-        const fn = msg.user?.firstName || '';
-        const ln = msg.user?.lastName || '';
-        return `${fn.charAt(0)}${ln.charAt(0)}`.toUpperCase();
+    const getDisplayName = (u) => {
+        if (!u) return 'Unknown';
+        if (u.role === 'organizer') return u.organizerName || `${u.firstName} ${u.lastName}`;
+        return `${u.firstName} ${u.lastName}`;
     };
 
-    const getDisplayName = (msg) => {
-        if (msg.user?.role === 'organizer' && msg.user?.organizerName) {
-            return msg.user.organizerName;
-        }
-        return `${msg.user?.firstName || ''} ${msg.user?.lastName || ''}`.trim();
+    const getRoleBadge = (role) => {
+        if (role === 'organizer') return <Chip label="Organizer" size="small" color="primary" sx={{ ml: 1 }} />;
+        if (role === 'admin') return <Chip label="Admin" size="small" color="error" sx={{ ml: 1 }} />;
+        return null;
     };
 
-    const formatTime = (dateStr) => {
-        const date = new Date(dateStr);
+    const formatTime = (date) => {
+        const d = new Date(date);
         const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
+        const diffMins = Math.floor((now - d) / 60000);
         if (diffMins < 1) return 'just now';
         if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
         if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString();
-    };
-
-    const renderReactions = (msg) => {
-        const reactions = msg.reactions || {};
-        const entries = Object.entries(reactions);
-        if (entries.length === 0) return null;
-
-        return (
-            <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
-                {entries.map(([emoji, users]) => (
-                    <Chip
-                        key={emoji}
-                        label={`${emoji} ${users.length}`}
-                        size="small"
-                        variant={users.some(u => u === user?._id || u === user?.id) ? 'filled' : 'outlined'}
-                        onClick={() => handleReaction(msg._id, emoji)}
-                        sx={{ cursor: 'pointer', fontSize: '0.75rem', height: 24 }}
-                    />
-                ))}
-            </Stack>
-        );
-    };
-
-    const renderMessage = (msg, isReply = false) => {
-        const isAuthor = msg.user?._id === user?.id || msg.user?._id === user?._id;
-        const isOrganizerUser = msg.user?.role === 'organizer';
-
-        return (
-            <Box
-                key={msg._id}
-                sx={{
-                    ml: isReply ? 4 : 0,
-                    mb: 1,
-                    p: 1.5,
-                    borderRadius: 2,
-                    bgcolor: msg.isAnnouncement
-                        ? 'rgba(255, 152, 0, 0.08)'
-                        : msg.isPinned
-                            ? 'rgba(33, 150, 243, 0.06)'
-                            : isReply
-                                ? 'rgba(0,0,0,0.02)'
-                                : 'transparent',
-                    borderLeft: msg.isAnnouncement
-                        ? '3px solid #ff9800'
-                        : msg.isPinned
-                            ? '3px solid #2196f3'
-                            : isReply
-                                ? '2px solid #e0e0e0'
-                                : 'none',
-                }}
-            >
-                <Box display="flex" alignItems="flex-start" gap={1.5}>
-                    <Avatar
-                        sx={{
-                            width: isReply ? 28 : 34,
-                            height: isReply ? 28 : 34,
-                            fontSize: isReply ? '0.7rem' : '0.8rem',
-                            bgcolor: isOrganizerUser ? 'primary.main' : 'grey.400',
-                        }}
-                    >
-                        {getInitials(msg)}
-                    </Avatar>
-
-                    <Box flex={1} minWidth={0}>
-                        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                            <Typography variant="subtitle2" fontWeight={600} fontSize={isReply ? '0.8rem' : '0.85rem'}>
-                                {getDisplayName(msg)}
-                            </Typography>
-                            {isOrganizerUser && (
-                                <Chip label="Organizer" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            )}
-                            {msg.isAnnouncement && (
-                                <Chip label="📢 Announcement" size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            )}
-                            {msg.isPinned && !msg.isAnnouncement && (
-                                <Chip label="📌 Pinned" size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            )}
-                            <Typography variant="caption" color="text.secondary">
-                                {formatTime(msg.createdAt)}
-                            </Typography>
-                        </Box>
-
-                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                            {msg.content}
-                        </Typography>
-
-                        {renderReactions(msg)}
-
-                        {/* Action buttons */}
-                        <Stack direction="row" spacing={0} sx={{ mt: 0.5 }}>
-                            {!isReply && (
-                                <Tooltip title="Reply">
-                                    <IconButton size="small" onClick={() => { setReplyTo(msg._id); setReplyContent(''); }}>
-                                        <Reply sx={{ fontSize: 16 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            )}
-                            {EMOJI_OPTIONS.slice(0, 3).map(emoji => (
-                                <Tooltip key={emoji} title={`React ${emoji}`}>
-                                    <IconButton size="small" onClick={() => handleReaction(msg._id, emoji)} sx={{ fontSize: 14, p: 0.5 }}>
-                                        {emoji}
-                                    </IconButton>
-                                </Tooltip>
-                            ))}
-                            {isOrganizer && (
-                                <>
-                                    <Tooltip title={msg.isPinned ? 'Unpin' : 'Pin'}>
-                                        <IconButton size="small" onClick={() => handleTogglePin(msg._id)} color={msg.isPinned ? 'primary' : 'default'}>
-                                            <PushPin sx={{ fontSize: 16 }} />
-                                        </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Delete">
-                                        <IconButton size="small" onClick={() => handleDelete(msg._id)} color="error">
-                                            <Delete sx={{ fontSize: 16 }} />
-                                        </IconButton>
-                                    </Tooltip>
-                                </>
-                            )}
-                            {isAuthor && !isOrganizer && (
-                                <Tooltip title="Delete">
-                                    <IconButton size="small" onClick={() => handleDelete(msg._id)} color="error">
-                                        <Delete sx={{ fontSize: 16 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            )}
-                        </Stack>
-                    </Box>
-                </Box>
-
-                {/* Reply input */}
-                {replyTo === msg._id && (
-                    <Box display="flex" gap={1} mt={1} ml={5}>
-                        <TextField
-                            size="small"
-                            fullWidth
-                            placeholder="Write a reply..."
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handlePostReply(msg._id)}
-                            multiline
-                            maxRows={3}
-                        />
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => handlePostReply(msg._id)}
-                            disabled={!replyContent.trim() || posting}
-                            sx={{ minWidth: 'auto', px: 2 }}
-                        >
-                            <Send sx={{ fontSize: 18 }} />
-                        </Button>
-                        <Button size="small" onClick={() => setReplyTo(null)}>Cancel</Button>
-                    </Box>
-                )}
-            </Box>
-        );
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     };
 
     if (loading) {
-        return (
-            <Box display="flex" justifyContent="center" py={4}>
-                <CircularProgress />
-            </Box>
-        );
+        return <Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>;
     }
 
-    if (error && messages.length === 0) {
-        return (
-            <Alert severity="info" sx={{ mt: 2 }}>
-                {error}
-            </Alert>
-        );
+    if (error && error.includes('registered')) {
+        return <Alert severity="info" sx={{ mt: 2 }}>{error}</Alert>;
     }
 
     return (
-        <Card sx={{ mt: 2 }}>
-            <CardContent>
-                {/* Header */}
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Forum color="primary" />
-                        <Typography variant="h6" fontWeight={600}>
-                            Discussion Forum
-                        </Typography>
-                        <Chip label={messages.length} size="small" color="default" />
-                    </Box>
-                    <Box>
-                        {isOrganizer && (
-                            <Button
-                                startIcon={<Campaign />}
-                                size="small"
-                                variant="outlined"
-                                color="warning"
-                                onClick={() => setAnnouncementDialog(true)}
-                                sx={{ mr: 1 }}
-                            >
-                                Announce
-                            </Button>
-                        )}
-                        <IconButton size="small" onClick={fetchMessages}>
-                            <Refresh />
-                        </IconButton>
-                    </Box>
-                </Box>
+        <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+                💬 Discussion Forum
+            </Typography>
 
-                {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-                {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+            {error && !error.includes('registered') && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
+            )}
 
-                {/* New message input */}
-                <Box display="flex" gap={1} mb={2}>
-                    <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="Write a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handlePostMessage();
-                            }
-                        }}
-                        multiline
-                        maxRows={4}
-                    />
-                    <Button
-                        variant="contained"
-                        onClick={handlePostMessage}
-                        disabled={!newMessage.trim() || posting}
-                        sx={{ minWidth: 'auto', px: 2 }}
-                    >
-                        <Send />
-                    </Button>
-                </Box>
-
-                <Divider sx={{ mb: 2 }} />
-
-                {/* Messages list */}
-                {messages.length === 0 ? (
-                    <Box textAlign="center" py={4}>
-                        <Typography variant="body2" color="text.secondary">
-                            No messages yet. Start the conversation!
-                        </Typography>
-                    </Box>
-                ) : (
-                    <Box sx={{ maxHeight: 500, overflowY: 'auto', pr: 1 }}>
-                        {messages.map(msg => (
-                            <Box key={msg._id}>
-                                {renderMessage(msg)}
-
-                                {/* Thread replies */}
-                                {msg.replies && msg.replies.length > 0 && (
-                                    <>
-                                        <Button
-                                            size="small"
-                                            onClick={() => toggleThread(msg._id)}
-                                            startIcon={expandedThreads[msg._id] ? <ExpandLess /> : <ExpandMore />}
-                                            sx={{ ml: 5, mb: 0.5, textTransform: 'none', color: 'text.secondary' }}
-                                        >
-                                            {expandedThreads[msg._id] ? 'Hide' : 'Show'} {msg.replies.length} {msg.replies.length === 1 ? 'reply' : 'replies'}
-                                        </Button>
-                                        <Collapse in={expandedThreads[msg._id]}>
-                                            {msg.replies.map(reply => renderMessage(reply, true))}
-                                        </Collapse>
-                                    </>
-                                )}
-
-                                <Divider sx={{ my: 1 }} />
-                            </Box>
-                        ))}
-                    </Box>
-                )}
-
-                {/* Announcement Dialog */}
-                <Dialog open={announcementDialog} onClose={() => setAnnouncementDialog(false)} maxWidth="sm" fullWidth>
-                    <DialogTitle>Post Announcement</DialogTitle>
-                    <DialogContent>
-                        <Typography variant="body2" color="text.secondary" mb={2}>
-                            Announcements are pinned and highlighted for all participants.
-                        </Typography>
+            {/* Organizer: Post Announcement */}
+            {isOrganizer && (
+                <Paper sx={{ p: 2, mb: 2, bgcolor: '#e3f2fd', border: '1px solid #90caf9' }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                        <Campaign sx={{ mr: 0.5, verticalAlign: 'middle' }} /> Post Announcement
+                    </Typography>
+                    <Box display="flex" gap={1}>
                         <TextField
-                            fullWidth
-                            multiline
-                            rows={4}
-                            placeholder="Write your announcement..."
-                            value={announcementContent}
-                            onChange={(e) => setAnnouncementContent(e.target.value)}
+                            fullWidth size="small"
+                            placeholder="Post an announcement to all participants..."
+                            value={announcement}
+                            onChange={(e) => setAnnouncement(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostAnnouncement()}
                         />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setAnnouncementDialog(false)}>Cancel</Button>
-                        <Button
-                            variant="contained"
-                            color="warning"
-                            onClick={handlePostAnnouncement}
-                            disabled={!announcementContent.trim()}
-                            startIcon={<Campaign />}
-                        >
-                            Post Announcement
+                        <Button variant="contained" onClick={handlePostAnnouncement} disabled={!announcement.trim()}>
+                            <Campaign />
                         </Button>
-                    </DialogActions>
-                </Dialog>
-            </CardContent>
-        </Card>
+                    </Box>
+                </Paper>
+            )}
+
+            {/* Post a message */}
+            <Box display="flex" gap={1} mb={2}>
+                <TextField
+                    fullWidth size="small"
+                    placeholder="Write a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostMessage()}
+                    multiline maxRows={3}
+                />
+                <Button variant="contained" onClick={handlePostMessage} disabled={!newMessage.trim()}>
+                    <Send />
+                </Button>
+            </Box>
+
+            <Divider sx={{ mb: 2 }} />
+
+            {/* Messages List */}
+            {messages.length === 0 ? (
+                <Typography color="text.secondary" textAlign="center" py={3}>
+                    No messages yet. Start the conversation!
+                </Typography>
+            ) : (
+                messages.map((msg) => (
+                    <Box key={msg._id} sx={{
+                        mb: 1.5, p: 1.5, borderRadius: 2,
+                        bgcolor: msg.isPinned ? '#fff8e1' : msg.isAnnouncement ? '#e3f2fd' : '#fafafa',
+                        border: msg.isPinned ? '1px solid #ffa726' : msg.isAnnouncement ? '1px solid #64b5f6' : '1px solid #eee',
+                    }}>
+                        {/* Message Header */}
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box display="flex" alignItems="center">
+                                <Avatar sx={{ width: 28, height: 28, mr: 1, fontSize: 14, bgcolor: msg.user?.role === 'organizer' ? '#1976d2' : '#757575' }}>
+                                    {msg.user?.firstName?.[0] || '?'}
+                                </Avatar>
+                                <Typography variant="subtitle2">{getDisplayName(msg.user)}</Typography>
+                                {getRoleBadge(msg.user?.role)}
+                                {msg.isPinned && <PushPin sx={{ ml: 1, fontSize: 16, color: '#ffa726' }} />}
+                                {msg.isAnnouncement && <Campaign sx={{ ml: 1, fontSize: 16, color: '#1976d2' }} />}
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                    {formatTime(msg.createdAt)}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <IconButton size="small" onClick={(e) => setEmojiAnchor({ el: e.currentTarget, msgId: msg._id })}>
+                                    <EmojiEmotions fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" onClick={() => { setReplyTo(msg._id); setReplyContent(''); }}>
+                                    <Reply fontSize="small" />
+                                </IconButton>
+                                {isOrganizer && (
+                                    <IconButton size="small" onClick={() => handlePinMessage(msg._id)}>
+                                        <PushPin fontSize="small" color={msg.isPinned ? 'warning' : 'action'} />
+                                    </IconButton>
+                                )}
+                                {(msg.user?._id === user?._id || isOrganizer) && (
+                                    <IconButton size="small" color="error" onClick={() => handleDeleteMessage(msg._id)}>
+                                        <Delete fontSize="small" />
+                                    </IconButton>
+                                )}
+                            </Box>
+                        </Box>
+
+                        {/* Message Content */}
+                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                            {msg.content}
+                        </Typography>
+
+                        {/* Reactions */}
+                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                            <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
+                                {Object.entries(msg.reactions).map(([emoji, users]) => (
+                                    <Chip
+                                        key={emoji}
+                                        label={`${emoji} ${Array.isArray(users) ? users.length : 0}`}
+                                        size="small" variant="outlined"
+                                        onClick={() => handleReaction(msg._id, emoji)}
+                                        sx={{ cursor: 'pointer' }}
+                                    />
+                                ))}
+                            </Box>
+                        )}
+
+                        {/* Replies */}
+                        {msg.replies && msg.replies.length > 0 && (
+                            <Box>
+                                <Button size="small" onClick={() => toggleReplies(msg._id)} sx={{ mt: 0.5 }}
+                                    endIcon={expandedReplies[msg._id] ? <ExpandLess /> : <ExpandMore />}>
+                                    {msg.replies.length} {msg.replies.length === 1 ? 'reply' : 'replies'}
+                                </Button>
+                                <Collapse in={expandedReplies[msg._id]}>
+                                    <Box sx={{ ml: 3, mt: 1 }}>
+                                        {msg.replies.map(reply => (
+                                            <Box key={reply._id} sx={{ mb: 1, p: 1, bgcolor: 'white', borderRadius: 1, borderLeft: '3px solid #ddd' }}>
+                                                <Box display="flex" alignItems="center" gap={0.5}>
+                                                    <Typography variant="caption" fontWeight={600}>
+                                                        {getDisplayName(reply.user)}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {formatTime(reply.createdAt)}
+                                                    </Typography>
+                                                    {(reply.user?._id === user?._id || isOrganizer) && (
+                                                        <IconButton size="small" color="error" onClick={() => handleDeleteMessage(reply._id)}>
+                                                            <Delete sx={{ fontSize: 14 }} />
+                                                        </IconButton>
+                                                    )}
+                                                </Box>
+                                                <Typography variant="body2">{reply.content}</Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Collapse>
+                            </Box>
+                        )}
+
+                        {/* Reply Input */}
+                        {replyTo === msg._id && (
+                            <Box display="flex" gap={1} mt={1} ml={3}>
+                                <TextField
+                                    fullWidth size="small"
+                                    placeholder="Write a reply..."
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleReply(msg._id)}
+                                    autoFocus
+                                />
+                                <Button size="small" onClick={() => handleReply(msg._id)} disabled={!replyContent.trim()}>Reply</Button>
+                                <Button size="small" color="inherit" onClick={() => setReplyTo(null)}>Cancel</Button>
+                            </Box>
+                        )}
+                    </Box>
+                ))
+            )}
+
+            {/* Emoji Picker Menu */}
+            <Menu
+                anchorEl={emojiAnchor.el}
+                open={Boolean(emojiAnchor.el)}
+                onClose={() => setEmojiAnchor({ el: null, msgId: null })}
+            >
+                <Box display="flex" p={1}>
+                    {EMOJI_OPTIONS.map(emoji => (
+                        <IconButton key={emoji} onClick={() => handleReaction(emojiAnchor.msgId, emoji)}>
+                            <Typography fontSize={20}>{emoji}</Typography>
+                        </IconButton>
+                    ))}
+                </Box>
+            </Menu>
+        </Paper>
     );
 };
 

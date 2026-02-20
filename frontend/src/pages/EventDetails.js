@@ -40,15 +40,15 @@ import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import FeedbackSection from '../components/FeedbackSection';
 import AddToCalendar from '../components/AddToCalendar';
+import DiscussionForum from '../components/DiscussionForum';
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+
 
   // State
   const [event, setEvent] = useState(null);
@@ -535,6 +535,11 @@ const EventDetails = () => {
         {/* Anonymous Feedback Section - shown when registered */}
         {alreadyRegistered && (
           <FeedbackSection eventId={id} isOrganizer={false} />
+        )}
+
+        {/* Discussion Forum - shown when registered */}
+        {alreadyRegistered && (
+          <DiscussionForum eventId={id} />
         )}
       </Paper>
 
