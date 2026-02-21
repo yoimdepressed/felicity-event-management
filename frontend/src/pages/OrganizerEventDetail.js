@@ -320,7 +320,7 @@ const OrganizerEventDetail = () => {
             <Button
               variant="outlined"
               startIcon={<Edit />}
-              onClick={() => navigate(`/organizer/edit-event/${event._id}`)}
+              onClick={() => navigate(`/organizer/event/${event._id}/edit`)}
             >
               Edit
             </Button>

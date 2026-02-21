@@ -2,21 +2,7 @@ import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import User from '../models/User.js';
 import QRCode from 'qrcode';
-
-// ============================================
-// EMAIL CONFIGURATION (Basic Setup)
-// ============================================
-
-// Email transporter (mock for now - email sending is optional)
-// For production, install nodemailer: npm install nodemailer
-const transporter = {
-  sendMail: async (options) => {
-    console.log('📧 [EMAIL] Would send email to:', options.to);
-    console.log('📧 [EMAIL] Subject:', options.subject);
-    // Mock successful email send
-    return Promise.resolve({ messageId: 'mock-' + Date.now() });
-  }
-};
+import { sendEmail } from '../utils/emailService.js';
 
 // Helper function to send ticket email
 const sendTicketEmail = async (registration, participant, event) => {
@@ -73,7 +59,7 @@ const sendTicketEmail = async (registration, participant, event) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendEmail(mailOptions);
     console.log(`✅ Ticket email sent to ${participant.email}`);
   } catch (error) {
     console.error('❌ Error sending ticket email:', error.message);

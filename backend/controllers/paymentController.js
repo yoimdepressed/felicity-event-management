@@ -2,15 +2,7 @@ import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import User from '../models/User.js';
 import QRCode from 'qrcode';
-
-// Mock email transporter (same as registrationController)
-const transporter = {
-    sendMail: async (options) => {
-        console.log('📧 [EMAIL] Would send email to:', options.to);
-        console.log('📧 [EMAIL] Subject:', options.subject);
-        return Promise.resolve({ messageId: 'mock-' + Date.now() });
-    }
-};
+import { sendEmail } from '../utils/emailService.js';
 
 // @desc    Upload payment proof for merchandise order
 // @route   POST /api/payments/:registrationId/upload-proof
@@ -33,6 +25,7 @@ export const uploadPaymentProof = async (req, res) => {
         // Check if registration is in PendingApproval state
         if (registration.registrationStatus !== 'PendingApproval') {
             return res.status(400).json({
+
                 success: false,
                 message: 'Payment proof can only be uploaded for pending approval orders',
             });
@@ -167,15 +160,49 @@ export const approvePayment = async (req, res) => {
 
         await registration.save();
 
-        // Send confirmation email
+        // Send confirmation email with full ticket details
         try {
             const participant = registration.participant;
             const eventData = registration.event;
-            await transporter.sendMail({
+            const qrCodeImage = registration.qrCode || '';
+            await sendEmail({
                 from: process.env.EMAIL_USER || 'felicity@example.com',
                 to: participant.email,
-                subject: `Payment Approved - ${eventData.eventName}`,
-                html: `<p>Your payment for ${eventData.eventName} has been approved! Your ticket ID is: ${registration.ticketId}</p>`,
+                subject: `✅ Payment Approved - ${eventData.eventName}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #1976d2;">🎉 Purchase Confirmed!</h2>
+                    <p>Dear ${participant.firstName} ${participant.lastName},</p>
+                    <p>Your payment for <strong>${eventData.eventName}</strong> has been approved.</p>
+                    
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                      <h3 style="margin-top: 0;">Order Details</h3>
+                      <p><strong>Event:</strong> ${eventData.eventName}</p>
+                      <p><strong>Type:</strong> ${eventData.eventType}</p>
+                      ${registration.merchandiseDetails ? `
+                        <p><strong>Size:</strong> ${registration.merchandiseDetails.size || 'N/A'}</p>
+                        <p><strong>Color:</strong> ${registration.merchandiseDetails.color || 'N/A'}</p>
+                        <p><strong>Quantity:</strong> ${registration.merchandiseDetails.quantity || 1}</p>
+                      ` : ''}
+                      <p><strong>Amount Paid:</strong> ₹${registration.amountPaid}</p>
+                    </div>
+                    
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                      <h3 style="margin-top: 0;">Your Ticket</h3>
+                      <p><strong>Ticket ID:</strong> ${registration.ticketId}</p>
+                      ${qrCodeImage ? `
+                        <div style="text-align: center; margin: 20px 0;">
+                          <img src="${qrCodeImage}" alt="QR Code" style="max-width: 200px;" />
+                        </div>
+                        <p style="font-size: 12px; color: #666;">Present this QR code at the event venue.</p>
+                      ` : ''}
+                    </div>
+                    
+                    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                      This is an automated email. Please do not reply.
+                    </p>
+                  </div>
+                `,
             });
         } catch (emailError) {
             console.error('Email send failed:', emailError);

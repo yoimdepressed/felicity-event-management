@@ -71,7 +71,6 @@ const CreateEvent = () => {
   const availableTags = ['Workshop', 'Competition', 'Cultural', 'Technical', 'Sports', 'Gaming', 'Music', 'Dance', 'Food', 'Art'];
 
   const [tagInput, setTagInput] = useState('');
-  const [customFormFields, setCustomFormFields] = useState([]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -200,7 +199,7 @@ const CreateEvent = () => {
       const startDate = new Date(formData.eventStartDate);
       const endDate = new Date(formData.eventEndDate);
       const deadline = new Date(formData.registrationDeadline);
-      const now = new Date();
+      const now = new Date(); // eslint-disable-line no-unused-vars
 
       if (endDate < startDate) {
         throw new Error('Event end date must be after start date');
@@ -278,8 +277,8 @@ const CreateEvent = () => {
       );
 
       if (response.data.success) {
-        const message = actionType === 'Published' 
-          ? 'Event created and published successfully!' 
+        const message = actionType === 'Published'
+          ? 'Event created and published successfully!'
           : 'Event saved as draft successfully!';
         setSuccess(message);
         setTimeout(() => {
@@ -801,101 +800,101 @@ const CreateEvent = () => {
                 <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   Custom Registration Form (Optional)
                 </Typography>
-            <Grid container spacing={3} mb={4}>
-              <Grid item xs={12}>
-                <Button
-                  variant="outlined"
-                  onClick={handleAddCustomField}
-                  sx={{ borderRadius: 2, fontWeight: 500 }}
-                >
-                  + Add Custom Field
-                </Button>
-              </Grid>
-              {formData.customRegistrationForm.map((field, index) => (
-                <Grid item xs={12} key={index}>
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={8}>
-                        <TextField
-                          fullWidth
-                          label={`Field ${index + 1} Label`}
-                          value={field.fieldLabel}
-                          onChange={(e) => handleCustomFieldChange(index, 'fieldLabel', e.target.value)}
-                          placeholder="e.g., Dietary Preferences, Accommodation Needed"
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Description />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <FormControl fullWidth>
-                          <FormLabel sx={{ mb: 1, fontWeight: 'bold', color: 'text.primary' }}>
-                            Field Type
-                          </FormLabel>
-                          <RadioGroup
-                            row
-                            name={`fieldType-${index}`}
-                            value={field.fieldType}
-                            onChange={(e) => handleCustomFieldChange(index, 'fieldType', e.target.value)}
-                          >
+                <Grid container spacing={3} mb={4}>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleAddCustomField}
+                      sx={{ borderRadius: 2, fontWeight: 500 }}
+                    >
+                      + Add Custom Field
+                    </Button>
+                  </Grid>
+                  {formData.customRegistrationForm.map((field, index) => (
+                    <Grid item xs={12} key={index}>
+                      <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={8}>
+                            <TextField
+                              fullWidth
+                              label={`Field ${index + 1} Label`}
+                              value={field.fieldLabel}
+                              onChange={(e) => handleCustomFieldChange(index, 'fieldLabel', e.target.value)}
+                              placeholder="e.g., Dietary Preferences, Accommodation Needed"
+                              InputProps={{
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <Description />
+                                  </InputAdornment>
+                                ),
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <FormControl fullWidth>
+                              <FormLabel sx={{ mb: 1, fontWeight: 'bold', color: 'text.primary' }}>
+                                Field Type
+                              </FormLabel>
+                              <RadioGroup
+                                row
+                                name={`fieldType-${index}`}
+                                value={field.fieldType}
+                                onChange={(e) => handleCustomFieldChange(index, 'fieldType', e.target.value)}
+                              >
+                                <FormControlLabel
+                                  value="text"
+                                  control={<Radio />}
+                                  label="Short Answer"
+                                />
+                                <FormControlLabel
+                                  value="textarea"
+                                  control={<Radio />}
+                                  label="Long Answer"
+                                />
+                                <FormControlLabel
+                                  value="number"
+                                  control={<Radio />}
+                                  label="Number"
+                                />
+                                <FormControlLabel
+                                  value="email"
+                                  control={<Radio />}
+                                  label="Email"
+                                />
+                                <FormControlLabel
+                                  value="phone"
+                                  control={<Radio />}
+                                  label="Phone"
+                                />
+                              </RadioGroup>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12}>
                             <FormControlLabel
-                              value="text"
-                              control={<Radio />}
-                              label="Short Answer"
+                              control={
+                                <Checkbox
+                                  checked={field.required}
+                                  onChange={(e) => handleCustomFieldChange(index, 'required', e.target.checked)}
+                                  color="primary"
+                                />
+                              }
+                              label="Required"
+                              sx={{ mb: 2 }}
                             />
-                            <FormControlLabel
-                              value="textarea"
-                              control={<Radio />}
-                              label="Long Answer"
-                            />
-                            <FormControlLabel
-                              value="number"
-                              control={<Radio />}
-                              label="Number"
-                            />
-                            <FormControlLabel
-                              value="email"
-                              control={<Radio />}
-                              label="Email"
-                            />
-                            <FormControlLabel
-                              value="phone"
-                              control={<Radio />}
-                              label="Phone"
-                            />
-                          </RadioGroup>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={field.required}
-                              onChange={(e) => handleCustomFieldChange(index, 'required', e.target.checked)}
-                              color="primary"
-                            />
-                          }
-                          label="Required"
-                          sx={{ mb: 2 }}
-                        />
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={() => handleRemoveCustomField(index)}
-                          sx={{ borderRadius: 2, fontWeight: 500 }}
-                        >
-                          Remove Field
-                        </Button>
-                      </Grid>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleRemoveCustomField(index)}
+                              sx={{ borderRadius: 2, fontWeight: 500 }}
+                            >
+                              Remove Field
+                            </Button>
+                          </Grid>
+                        </Grid>
+                      </Paper>
                     </Grid>
-                  </Paper>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
               </>
             )}
 

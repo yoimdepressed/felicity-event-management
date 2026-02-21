@@ -9,6 +9,8 @@ import PasswordResetRequest from '../models/PasswordResetRequest.js';
 // Route: POST /api/admin/organizers
 // Access: Private (Admin only)
 
+import crypto from 'crypto';
+
 export const createOrganizer = async (req, res) => {
   try {
     // Step 1: Extract organizer data from request body
@@ -24,31 +26,38 @@ export const createOrganizer = async (req, res) => {
       discordWebhook,
     } = req.body;
 
-    // Step 2: Basic validation
-    if (!firstName || !lastName || !email || !password) {
+    // Step 2: Validate required organizer fields
+    if (!organizerName) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: firstName, lastName, email, password',
+        message: 'Please provide organizerName',
       });
     }
 
-    // Step 3: Prepare organizer data
+    // Step 3: Auto-generate login email and password if not provided
+    const slug = organizerName.toLowerCase().replace(/[^a-z0-9]+/g, '').substring(0, 20);
+    const autoEmail = email || `${slug}@felicity.com`;
+    const autoPassword = password || crypto.randomBytes(5).toString('hex'); // 10-char password
+    const autoFirstName = firstName || organizerName;
+    const autoLastName = lastName || 'Club';
+
+    // Step 4: Prepare organizer data
     const organizerData = {
-      firstName,
-      lastName,
-      email,
-      password,
-      role: 'organizer',  // Force role to be organizer
+      firstName: autoFirstName,
+      lastName: autoLastName,
+      email: autoEmail,
+      password: autoPassword,
+      role: 'organizer',
       organizerName,
       category,
       description,
-      contactEmail: contactEmail || email,  // Use login email if contactEmail not provided
+      contactEmail: contactEmail || autoEmail,
       discordWebhook,
       isActive: true,
       isApproved: true,
     };
 
-    // Step 4: Validate organizer-specific fields using User Model method
+    // Step 5: Validate organizer-specific fields using User Model method
     const validationErrors = User.validateOrganizer(organizerData);
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -58,31 +67,30 @@ export const createOrganizer = async (req, res) => {
       });
     }
 
-    // Step 5: Check if organizer with this email already exists
-    const existingUser = await User.findOne({ email });
+    // Step 6: Check if organizer with this email already exists
+    const existingUser = await User.findOne({ email: autoEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered. Please use a different email.',
+        message: `Email ${autoEmail} already registered. Please use a different organizer name or provide a custom email.`,
       });
     }
 
-    // Step 6: Create organizer in database
-    // Password will be automatically hashed by User model pre-save middleware
+    // Step 7: Create organizer in database
     const organizer = await User.create(organizerData);
 
-    // Step 7: Generate JWT token for the organizer
+    // Step 8: Generate JWT token for the organizer
     const token = organizer.generateToken();
 
-    // Step 8: Send success response
+    // Step 9: Send success response with auto-generated credentials
     res.status(201).json({
       success: true,
       message: 'Organizer account created successfully',
       token,
       organizer: organizer.getPublicProfile(),
       credentials: {
-        email: organizer.email,
-        temporaryPassword: password,  // Send password to admin so they can share with organizer
+        email: autoEmail,
+        password: autoPassword,
         message: 'Share these credentials with the organizer'
       }
     });
