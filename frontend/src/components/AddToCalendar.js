@@ -35,7 +35,8 @@ const AddToCalendar = ({ eventId, eventName }) => {
     const handleDownloadICS = () => {
         // Direct download through a link
         const token = localStorage.getItem('token');
-        const url = `http://localhost:5000/api/calendar/event/${eventId}/ics`;
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const url = `${baseUrl}/calendar/event/${eventId}/ics`;
 
         // Open in new tab with auth (temporary approach)
         fetch(url, {

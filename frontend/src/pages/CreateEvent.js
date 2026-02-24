@@ -251,7 +251,7 @@ const CreateEvent = () => {
 
       // Make API call
       const response = await axios.post(
-        'http://localhost:5000/api/events',
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/events`,
         eventData,
         {
           headers: {

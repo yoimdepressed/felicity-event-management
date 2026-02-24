@@ -136,7 +136,7 @@ const PaymentApprovals = ({ eventId }) => {
                                             <Button
                                                 size="small"
                                                 startIcon={<Visibility />}
-                                                onClick={() => setViewProof(`http://localhost:5000${reg.paymentProofUrl}`)}
+                                                onClick={() => setViewProof(`${(process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '')}${reg.paymentProofUrl}`)}
                                             >
                                                 View
                                             </Button>
