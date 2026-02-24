@@ -89,7 +89,7 @@ The platform provides the following core functionality:
 
 ### Tier A Features
 
-#### 1. QR Scanner and Attendance Tracking (Section 10.4)
+#### 1. QR Scanner and Attendance Tracking
 
 Selection rationale: Manual attendance tracking at college fest events is slow and error-prone. Organizers typically use paper sign-in sheets or manually check names against a list, which does not scale when hundreds of participants enter an event. QR-based attendance reduces check-in to a single camera scan.
 
@@ -103,7 +103,7 @@ Technical details:
 - Routes: /api/attendance/scan (POST), /api/attendance/manual (POST), /api/attendance/event/:eventId (GET), /api/attendance/event/:eventId/audit (GET)
 
 
-#### 2. Merchandise Payment Approval Workflow (Section 10.5)
+#### 2. Merchandise Payment Approval Workflow
 
 Selection rationale: College fest merchandise involves real money, and Indian college fests commonly accept payments through multiple channels (UPI, bank transfer, cash). An automated payment gateway would restrict payment methods and add complexity. A manual approval workflow where participants upload payment proof and organizers verify it matches how these transactions actually happen.
 
@@ -119,7 +119,7 @@ Technical details:
 
 ### Tier B Features
 
-#### 3. Real-Time Discussion Forum (Section 11.2)
+#### 3. Real-Time Discussion Forum
 
 Selection rationale: Participants frequently have questions about events (venue directions, what to bring, schedule changes) and organizers need a channel to post updates. Without a built-in discussion forum, this communication happens through fragmented WhatsApp groups. An integrated forum tied to each event keeps all communication in one place and accessible to all registered participants.
 
@@ -134,72 +134,35 @@ Technical details:
 - Routes: /api/discussions/event/:eventId (GET, POST), /api/discussions/event/:eventId/announcement (POST), /api/discussions/:messageId (DELETE), /api/discussions/:messageId/pin (PUT), /api/discussions/:messageId/react (POST)
 
 
-#### 4. Event Feedback and Rating System
+#### 4. Organizer Password Reset Workflow
 
-Selection rationale: After an event ends, organizers need structured feedback to improve future events. An integrated feedback system with ratings provides quantifiable data (average rating, rating distribution) alongside qualitative comments.
+Selection rationale: Organizers cannot self-reset their passwords since they have no self-registration flow. Without a structured reset process, a locked-out organizer would have to message the admin informally with no audit trail. A formal request-and-approval workflow gives both sides visibility into the status of the request and produces a record of every reset for accountability.
 
-Implementation approach: After an event is marked as completed, registered participants can submit feedback consisting of a 1-5 star rating and a text comment. The FeedbackSection component appears on the event details page only for completed events. Organizers can view all feedback filtered by rating. Each participant can submit only one feedback per event, enforced at the database level with a compound unique index on event + participant.
+Implementation approach: An organizer submits a password reset request from their profile page, providing a reason. The request is stored in the PasswordResetRequest model with a status of Pending. The Admin sees all pending requests in the Password Reset Requests page, which shows the club name, request date, and reason. The admin can approve the request by entering a new password (which is immediately applied to the organizer account) or reject it with notes. The organizer can track their request status from their profile page. All requests regardless of outcome are retained in history for audit purposes.
+
+Design decisions: The admin sets the new password rather than the system auto-generating one, which gives the admin control over what credentials are shared with the organizer. The PasswordResetRequest model stores the full history (Pending, Approved, Rejected) so past resets are always auditable. The organizer profile page shows current request status so the organizer does not need to contact the admin to check progress.
 
 Technical details:
-- Frontend: FeedbackSection.js with star rating input, comment field, and feedback list with filtering
-- Backend: feedbackController.js handles submission, retrieval, and duplicate prevention
-- Model: Feedback.js with event reference, participant reference, rating (1-5), comment, and compound unique index
-- Routes: /api/feedback/event/:eventId (GET, POST), /api/feedback/event/:eventId/my-feedback (GET)
+- Frontend: OrganizerProfile.js includes a request form with reason field and status display; PasswordResetRequests.js (admin page) lists all requests with tabs for Pending, Approved, Rejected, and approve/reject dialogs
+- Backend: PasswordResetRequest model with organizer reference, reason, status, adminNotes, and timestamps
+- Routes: /api/auth/request-password-reset (POST), /api/admin/password-resets (GET), /api/admin/password-resets/:id/approve (PUT), /api/admin/password-resets/:id/reject (PUT)
 
 
 ### Tier C Features
 
-#### 5. Calendar Integration (Section 10.2)
+#### 5. Anonymous Feedback System
 
-Selection rationale: Participants who register for multiple events need a way to keep track of schedules without manually copying dates. Calendar integration lets them add events directly to their preferred calendar app with a single click.
+Selection rationale: After events end, organizers need structured feedback to measure how well an event was received and to identify areas for improvement. An anonymous feedback system encourages honest responses since participants do not fear social consequences from their organizer. Quantified star ratings also give organizers a quick aggregate metric rather than having to read every comment.
 
-Implementation approach: The backend generates .ics (iCalendar) files and Google Calendar deep links for each event. The AddToCalendar component provides buttons for Google Calendar (opens a pre-filled URL) and .ics download (works with Apple Calendar, Outlook, and any other app supporting the iCalendar standard). The .ics file includes event name, description, venue, start time, end time, and organizer information.
+Implementation approach: After an event ends, participants who attended (attendance marked as true on their registration) can submit a 1-5 star rating and an optional text comment from the Event Details page. Anonymity is enforced at the API level: the organizer-facing endpoint returns feedback records with only the rating, comment, and submission timestamp -- the participant field is excluded from the query projection. Organizers see an aggregated view showing the average rating, total review count, a 5-star distribution breakdown, and the individual anonymous comments. A filter by star rating is available. Participants can edit their previously submitted feedback. The compound unique index on (event, participant) in the database ensures no participant can submit duplicate feedback for the same event.
 
-Technical details:
-- Frontend: AddToCalendar.js with Google Calendar link and .ics download button
-- Backend: calendar route generates .ics content with VCALENDAR/VEVENT formatting using moment for timestamps
-- Routes: /api/calendar/event/:eventId/links (GET), /api/calendar/event/:eventId/ics (GET, returns .ics file)
-
-
-#### 6. Discord Webhook Integration
-
-Selection rationale: Many college clubs already have active Discord servers. Automatically posting event announcements to Discord eliminates manual copy-pasting of event details and ensures announcements go out immediately when an event is published.
-
-Implementation approach: Each organizer can configure a Discord webhook URL in their profile settings. When an event's status changes to "Published" (creating as published, publishing a draft, or updating status to published), the backend sends an HTTP POST to the webhook URL with a Discord embed containing the event name, description, date, venue, price, and a link to the event page. The webhook fires from the backend to keep the webhook URL secret and to ensure the notification is sent even if the organizer closes their browser after publishing.
-
-Design decisions: The webhook fires in the eventController (createEvent, updateEvent, publishEvent) rather than in a background job. If the webhook fails (Discord down, invalid URL), the error is logged but the main request succeeds. The organizer still sees their event published.
+Design decisions: Anonymity is implemented server-side (not just hidden in the UI), so the organizer cannot retrieve participant identity even by calling the API directly. The feedback form only appears for participants whose attended flag is true, which links the anonymous feedback system to the QR attendance tracking feature -- only people who actually showed up can leave a review. Organizers can filter feedback by rating to quickly identify patterns (e.g., all 1-star reviews) without reading everything.
 
 Technical details:
-- Backend utility: discordWebhook.js builds a Discord embed and sends it via axios.post
-- Integration points: createEvent (if Published), updateEvent (if status changes to Published), publishEvent (dedicated endpoint)
-- Embed includes: event name, description, dates, venue, price, type, eligibility, deadline, and link
-
-
-#### 7. In-App Notification System
-
-Selection rationale: Users need to know about discussion announcements and registration updates without manually checking each page. An in-app notification system provides a central location for all updates.
-
-Implementation approach: The Notification model stores notifications with recipient, type, title, message, and read status. Notifications are created by backend actions: organizer announcements notify all registered participants, payment approvals/rejections notify the participant. The Navbar displays a bell icon with an unread count badge. Clicking opens a popover with the notification list. The frontend polls the unread count every 30 seconds.
-
-Technical details:
-- Frontend: Navbar.js with bell icon, badge count, notification popover, mark-all-read button
-- Backend: notificationController.js with getNotifications (paginated), getUnreadCount, markAsRead, markAllAsRead
-- Model: Notification.js with recipient, type, title, message, relatedEvent, isRead, createdAt
-- Routes: /api/notifications (GET), /api/notifications/unread-count (GET), /api/notifications/:id/read (PUT), /api/notifications/read-all (PUT)
-
-
-#### 8. Fuzzy Search
-
-Selection rationale: Users frequently misspell event names when searching. A strict substring match returns no results for "hackathon" if someone types "hackatohn". Fuzzy search tolerates typos.
-
-Implementation approach: A custom fuzzy search utility (fuzzySearch.js) based on the Levenshtein distance algorithm. It computes edit distance between the query and each searchable field (event name, organizer name, tags), normalizes by string length to produce a similarity score between 0 and 1, then returns events above a threshold (0.3). The search runs in-memory on the already-filtered result set from MongoDB, so the database handles structured filters and fuzzy search handles text matching.
-
-Design decisions: Custom implementation over fuse.js because Levenshtein is straightforward to understand and debug, and our dataset (hundreds of events) does not need more sophisticated algorithms. For larger scale, MongoDB Atlas Search or Elasticsearch would be appropriate.
-
-Technical details:
-- Backend utility: fuzzySearch.js with Levenshtein distance, word-level matching, multi-field scoring
-- Integration: getAllEvents applies fuzzy search after MongoDB query filters
-- Searchable fields: event name, organizer name, tags
+- Frontend: FeedbackSection.js renders a participant submission form (star selector and comment) or the organizer aggregated view depending on the isOrganizer prop; displayed inside OrganizerEventDetail.js and EventDetails.js
+- Backend: feedbackController.js submitFeedback verifies attendance before accepting, getEventFeedback excludes participant identity from the response projection
+- Model: Feedback.js with compound unique index on event + participant; participant field is not selected in organizer queries
+- Routes: /api/feedback/event/:eventId (GET for organizer aggregated view), /api/feedback/event/:eventId (POST for participant submission), /api/feedback/event/:eventId/my-feedback (GET for participant to check own submission)
 
 ---
 
