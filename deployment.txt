@@ -1,4 +1,4 @@
 Frontend URL: https://felicity-event-management-7qwv.vercel.app
-Backend URL: [Your Render backend URL - e.g. https://felicity-event-management.onrender.com]
+Backend URL: https://felicity-event-management-mjuo.onrender.com
 
-Note: The REACT_APP_API_URL environment variable must be set in Vercel project settings pointing to the backend API URL.
+Note: The REACT_APP_API_URL environment variable is set in Vercel project settings pointing to https://felicity-event-management-mjuo.onrender.com/api
