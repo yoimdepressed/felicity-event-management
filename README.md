@@ -22,16 +22,6 @@ Roll Number: 2024101006
 
 ---
 
-## Overview
-
-The platform provides the following core functionality:
-
-- Participants can browse events, register with custom forms, purchase merchandise, receive QR-coded tickets, follow clubs, participate in discussion forums, and leave feedback.
-- Organizers can create events with a dynamic form builder, manage registrations, track attendance via QR scanning, view analytics, export data to CSV, and receive Discord webhook notifications.
-- Admins have full control over organizer accounts (create, archive, restore, permanently delete), can reset passwords, and have system-wide oversight.
-
----
-
 ## Libraries, Frameworks, and Modules Used
 
 ### Backend
@@ -267,7 +257,7 @@ The build output goes to `frontend/build/` and can be served by any static file 
 Deployed on Vercel. The root directory is set to `frontend/` in the Vercel project settings.
 
 Environment variable set in the Vercel dashboard:
-- `REACT_APP_API_URL` = the deployed backend URL (for example, https://your-backend.onrender.com/api)
+- `REACT_APP_API_URL` = https://felicity-event-management-mjuo.onrender.com/api
 
 The `vercel.json` in the frontend directory configures SPA rewrites so all routes are handled by index.html, which is required for client-side routing with React Router.
 
@@ -291,83 +281,6 @@ MongoDB Atlas (free tier). The connection string is stored as `MONGODB_URI` on t
 ### Deployment URLs
 
 See `deployment.txt` in the project root for the live frontend and backend URLs.
-
----
-
-## Project Structure
-
-```
-felicity-event-management/
-|
-+-- backend/
-|   +-- config/
-|   |   +-- database.js              # MongoDB connection setup
-|   +-- controllers/
-|   |   +-- adminController.js       # Organizer CRUD, password resets, stats
-|   |   +-- attendanceController.js  # QR scan validation, manual override, audit log
-|   |   +-- authController.js        # Register, login, profile, password change
-|   |   +-- discussionController.js  # Forum messages, announcements, reactions, pins
-|   |   +-- eventController.js       # Event CRUD, search, filters, form builder, lifecycle
-|   |   +-- feedbackController.js    # Rating and comment submission
-|   |   +-- notificationController.js# In-app notification management
-|   |   +-- paymentController.js     # Payment proof upload, approve/reject
-|   |   +-- registrationController.js# Event registration, ticket generation
-|   +-- middleware/
-|   |   +-- auth.js                  # JWT verification and role-based authorization
-|   +-- models/
-|   |   +-- Discussion.js            # Forum messages with threading, reactions, pins
-|   |   +-- Event.js                 # Events with status machine, form builder, permissions
-|   |   +-- Feedback.js              # Ratings and comments with unique constraint
-|   |   +-- Notification.js          # In-app notifications
-|   |   +-- PasswordResetRequest.js  # Organizer password reset tracking
-|   |   +-- Registration.js          # Registrations with ticket ID, payment status
-|   |   +-- User.js                  # Unified user model for all roles
-|   +-- routes/
-|   |   +-- admin.js, attendance.js, auth.js, discussion.js,
-|   |   |   events.js, feedback.js, notifications.js, payment.js, public.js,
-|   |   |   registrations.js
-|   +-- utils/
-|   |   +-- discordWebhook.js        # Discord webhook POST utility
-|   |   +-- emailService.js          # Nodemailer email utility
-|   |   +-- fuzzySearch.js           # Levenshtein-based fuzzy search
-|   |   +-- seedAdmin.js             # Admin account seeding script
-|   +-- uploads/payment-proofs/      # Uploaded payment screenshots
-|   +-- server.js                    # Express entry point
-|   +-- package.json
-|
-+-- frontend/
-|   +-- public/index.html
-|   +-- src/
-|   |   +-- components/
-|   |   |   +-- DiscussionForum.js   # Threaded forum with reactions
-|   |   |   +-- FeedbackSection.js   # Star rating and comments
-|   |   |   +-- FormBuilder.js       # Custom registration form builder
-|   |   |   +-- Navbar.js            # Navigation with notification bell
-|   |   |   +-- PaymentApprovals.js  # Payment review interface
-|   |   |   +-- QRScanner.js         # Camera QR code scanner
-|   |   +-- context/
-|   |   |   +-- AuthContext.js       # Authentication state (Context API)
-|   |   +-- pages/
-|   |   |   +-- AdminDashboard.js, AttendanceDashboard.js, BrowseEvents.js,
-|   |   |   |   ClubsListing.js, CreateEvent.js, EditEvent.js, EventDetails.js,
-|   |   |   |   Login.js, ManageOrganizers.js, MyEvents.js, Onboarding.js,
-|   |   |   |   OrganizerDashboard.js, OrganizerDetailPage.js,
-|   |   |   |   OrganizerEventDetail.js, OrganizerOngoingEvents.js,
-|   |   |   |   OrganizerProfile.js, ParticipantDashboard.js,
-|   |   |   |   ParticipantMyEvents.js, PasswordResetRequests.js,
-|   |   |   |   ProfileEdit.js, ProfilePage.js, Register.js
-|   |   +-- services/
-|   |   |   +-- api.js               # Axios instance with all API endpoints
-|   |   +-- utils/
-|   |   |   +-- PrivateRoute.js      # Role-based route protection
-|   |   +-- App.js                   # Route definitions
-|   |   +-- index.js                 # React entry point
-|   +-- package.json
-|   +-- vercel.json                  # Vercel deployment config
-|
-+-- deployment.txt                   # Live frontend and backend URLs
-+-- README.md
-```
 
 ---
 
@@ -472,44 +385,3 @@ DELETE /api/admin/events/:id/permanent        Permanently delete event
 Created by running `node utils/seedAdmin.js` in the backend directory. Credentials can be changed via the ADMIN_EMAIL and ADMIN_PASSWORD environment variables before running the seed script.
 
 ---
-
-## User Roles and Access Control
-
-### Participant
-- Browse and search events with filters (type, eligibility, date range, followed clubs)
-- Register for normal events and purchase merchandise
-- Upload payment proofs for merchandise
-- Receive QR-coded tickets via email
-- View registration history and status
-- Follow and unfollow clubs
-- Participate in event discussion forums
-- Submit feedback for completed events
-- Receive in-app notifications
-- Edit profile and preferences
-
-### Organizer
-- Create events as drafts or publish directly
-- Build custom registration forms with 10 field types (text, email, phone, number, textarea, date, dropdown, radio, checkbox, file)
-- Manage event lifecycle (Draft, Published, Ongoing, Completed, Closed)
-- View registrations and export to CSV
-- Track attendance with QR scanner
-- Approve or reject merchandise payments
-- Post announcements in discussion forums
-- Pin messages and moderate discussions
-- Configure Discord webhook for automatic announcements
-- View event analytics
-
-### Admin
-- Create organizer accounts with auto-generated credentials
-- Archive (disable) and restore organizer accounts
-- Permanently delete organizer accounts
-- Reset organizer passwords
-- Review password reset requests
-- View system-wide statistics
-- Manage all events including inactive ones
-- Permanently delete events
-
----
-
-Developer: 2024101006
-Course: DASS (Design and Analysis of Software Systems)
