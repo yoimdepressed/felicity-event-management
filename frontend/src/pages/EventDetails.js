@@ -42,7 +42,6 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import FeedbackSection from '../components/FeedbackSection';
-import AddToCalendar from '../components/AddToCalendar';
 import DiscussionForum from '../components/DiscussionForum';
 
 const EventDetails = () => {
@@ -527,12 +526,6 @@ const EventDetails = () => {
             </Typography>
           )}
 
-          {/* Add to Calendar - shown when registered */}
-          {alreadyRegistered && (
-            <Box sx={{ mt: 2 }}>
-              <AddToCalendar eventId={id} eventName={event?.eventName} />
-            </Box>
-          )}
         </Box>
 
         {/* Anonymous Feedback Section - shown when registered */}

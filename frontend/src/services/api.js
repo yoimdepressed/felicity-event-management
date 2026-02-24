@@ -95,11 +95,6 @@ export const feedbackAPI = {
   getMyFeedback: (eventId) => api.get(`/feedback/event/${eventId}/my-feedback`),
 };
 
-export const calendarAPI = {
-  getCalendarLinks: (eventId) => api.get(`/calendar/event/${eventId}/links`),
-  downloadICS: (eventId) => `${API_BASE_URL}/calendar/event/${eventId}/ics`,
-};
-
 export const notificationAPI = {
   getNotifications: (params = {}) => api.get('/notifications', { params }),
   getUnreadCount: () => api.get('/notifications/unread-count'),

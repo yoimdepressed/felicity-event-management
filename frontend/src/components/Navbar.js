@@ -154,8 +154,8 @@ const Navbar = () => {
   const organizerNavItems = [
     { label: 'Dashboard', path: '/organizer', icon: <Dashboard /> },
     { label: 'Create Event', path: '/organizer/create-event', icon: <Add /> },
-    { label: 'My Events', path: '/organizer/my-events', icon: <EventAvailable /> },
     { label: 'Ongoing Events', path: '/organizer/ongoing-events', icon: <Event /> },
+    { label: 'Profile', path: '/organizer/profile', icon: <Person /> },
   ];
 
   // Admin navigation items

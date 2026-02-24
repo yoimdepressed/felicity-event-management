@@ -48,13 +48,12 @@ The platform provides the following core functionality:
 | nodemailer | 8.0.1 | Email delivery | Sends registration confirmation emails with QR-coded tickets attached. Connects to Gmail SMTP with an app-specific password. Simpler than third-party email APIs for our volume. |
 | qrcode | 1.5.4 | QR code image generation | Generates unique QR codes for each registration ticket, encoding the ticket ID that organizers scan for attendance. Outputs data URLs embedded directly in emails. |
 | multer | 2.0.2 | Multipart file upload handling | Handles payment proof image uploads for merchandise events. Parses multipart/form-data and saves files to disk. |
-| cloudinary | 2.9.0 | Cloud image storage | Available as an alternative to local file storage for payment proof images. Provides CDN delivery and automatic image optimization. |
 | uuid | 13.0.0 | Unique identifier generation | Generates unique ticket IDs for registrations and team codes. UUIDs prevent enumeration attacks on ticket endpoints. |
 | json2csv | 6.0.0 | CSV export from JSON data | Allows organizers to export participant lists as CSV files for offline management, a common request from fest organizers sharing data with non-technical team members. |
 | axios | 1.13.5 | HTTP client for outgoing requests | Used for sending Discord webhook notifications. When an event is published, the backend POSTs an embed message to the configured Discord webhook URL. |
 | validator | 13.15.26 | String validation utilities | Provides isEmail, isURL, isAlphanumeric for additional input validation beyond what express-validator covers. |
 | date-fns | 4.1.0 | Date manipulation | Used for date arithmetic in controllers (deadlines, date ranges, formatting). Tree-shakeable and modular unlike moment.js. |
-| moment | 2.30.1 | Date formatting for calendar exports | Used specifically for generating .ics calendar file timestamps where moment's format strings match the iCal spec directly. |
+| moment | 2.30.1 | Date formatting | Used in the backend for date arithmetic. |
 | nodemon | 3.1.11 (dev) | Auto-restart on file changes | Development-only. Watches for file changes and restarts the server automatically during development. |
 
 ### Frontend
@@ -77,9 +76,6 @@ The platform provides the following core functionality:
 | react-hook-form | 7.71.1 | Form state management | Manages form state with minimal re-renders using uncontrolled components internally. Reduces boilerplate compared to manual useState for every field. |
 | yup | 1.7.1 | Schema-based form validation | Integrates with react-hook-form for declarative validation schemas (email patterns, password length, conditional required fields). |
 | react-hot-toast | 2.6.0 | Toast notifications | Non-intrusive success/error messages. Better UX than browser alert() for actions like event creation, registration, payment approval. |
-| react-google-recaptcha | 3.1.0 | CAPTCHA verification | Available for registration form bot prevention. |
-| @reduxjs/toolkit | 2.11.2 | State management | Installed but not actively used. React Context API (AuthContext) handles our authentication state needs without Redux overhead. Available if state complexity grows. |
-| react-redux | 9.2.0 | React-Redux bindings | Companion to Redux Toolkit. Same situation -- installed but Context API is sufficient. |
 | ajv | 8.17.1 | JSON schema validator | Explicit dependency to resolve a transitive dependency conflict between react-scripts, ajv-keywords, and schema-utils that caused build failures on Vercel. |
 | web-vitals | 2.1.4 | Performance metrics | Default CRA inclusion. Reports Core Web Vitals for monitoring frontend performance. |
 
@@ -109,7 +105,7 @@ Selection rationale: College fest merchandise involves real money, and Indian co
 
 Implementation approach: When a participant registers for a merchandise event, they receive a "pending payment" status. They upload a screenshot of their payment (UPI receipt, bank transfer confirmation) through the PaymentApprovals component. The file is handled by multer on the backend, stored in the uploads directory, and served statically. The organizer sees pending payments in their event dashboard and can approve or reject each one with optional notes. On approval, the system generates a QR ticket and sends it via email. On rejection, the participant is notified and can re-upload.
 
-Design decisions: We implemented a state machine for payment status (Pending -> Uploaded -> Approved/Rejected) to prevent race conditions. File uploads are stored locally with multer rather than requiring cloud storage setup, though cloudinary integration is available. The approval UI shows the uploaded proof image inline so organizers do not need to download files.
+Design decisions: We implemented a state machine for payment status (Pending -> Uploaded -> Approved/Rejected) to prevent race conditions. File uploads are stored locally with multer. The approval UI shows the uploaded proof image inline so organizers do not need to download files.
 
 Technical details:
 - Frontend: PaymentApprovals.js component with image preview, approve/reject buttons, and admin notes
@@ -327,7 +323,7 @@ felicity-event-management/
 |   |   +-- Registration.js          # Registrations with ticket ID, payment status
 |   |   +-- User.js                  # Unified user model for all roles
 |   +-- routes/
-|   |   +-- admin.js, attendance.js, auth.js, calendar.js, discussion.js,
+|   |   +-- admin.js, attendance.js, auth.js, discussion.js,
 |   |   |   events.js, feedback.js, notifications.js, payment.js, public.js,
 |   |   |   registrations.js
 |   +-- utils/
@@ -343,7 +339,6 @@ felicity-event-management/
 |   +-- public/index.html
 |   +-- src/
 |   |   +-- components/
-|   |   |   +-- AddToCalendar.js     # Calendar export buttons
 |   |   |   +-- DiscussionForum.js   # Threaded forum with reactions
 |   |   |   +-- FeedbackSection.js   # Star rating and comments
 |   |   |   +-- FormBuilder.js       # Custom registration form builder
@@ -388,8 +383,6 @@ GET    /api/events                            Browse events with search and filt
 GET    /api/events/trending                   Top 5 trending events (last 24 hours)
 GET    /api/events/:id                        Single event details
 GET    /api/events/:id/form                   Custom registration form for an event
-GET    /api/calendar/event/:id/links          Calendar links for an event
-GET    /api/calendar/event/:id/ics            Download .ics calendar file
 ```
 
 ### Authenticated (Any Role)
@@ -492,7 +485,6 @@ Created by running `node utils/seedAdmin.js` in the backend directory. Credentia
 - Participate in event discussion forums
 - Submit feedback for completed events
 - Receive in-app notifications
-- Add events to calendar
 - Edit profile and preferences
 
 ### Organizer

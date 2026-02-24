@@ -29,12 +29,22 @@ export const AuthProvider = ({ children }) => {
   const fetchUserData = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000, // 15s timeout — don't hang forever
       });
       setUser(response.data.user);
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
-      logout();
+      // Only logout on auth errors (401 = token invalid/expired).
+      // Network errors, timeouts, or 5xx (Render cold start) should NOT log out
+      // the user — they still have a valid token, the server is just waking up.
+      if (error.response && error.response.status === 401) {
+        console.error('Token invalid or expired, logging out:', error);
+        logout();
+      } else {
+        // Network/server error: keep the token so the user stays "logged in"
+        // and can retry once the server is awake.
+        console.warn('Could not reach server to verify session (server may be waking up):', error.message);
+      }
     } finally {
       setLoading(false);
     }

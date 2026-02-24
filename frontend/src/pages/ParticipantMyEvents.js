@@ -39,7 +39,7 @@ import {
 const ParticipantMyEvents = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0); // 0: Upcoming, 1: History
-  const [historyTab, setHistoryTab] = useState(0); // 0: All, 1: Normal, 2: Merchandise, 3: Cancelled
+  const [historyTab, setHistoryTab] = useState(0); // 0: All, 1: Normal, 2: Merchandise, 3: Completed, 4: Cancelled
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -71,7 +71,9 @@ const ParticipantMyEvents = () => {
         } else if (historyTab === 2) {
           tab = 'all';
           eventType = 'Merchandise';
-        } else if (historyTab === 3) tab = 'cancelled';
+        } else if (historyTab === 3) {
+          tab = 'completed';
+        } else if (historyTab === 4) tab = 'cancelled';
       }
 
       const params = new URLSearchParams();
@@ -257,6 +259,7 @@ const ParticipantMyEvents = () => {
               <Tab label="All" />
               <Tab label="Normal Events" />
               <Tab label="Merchandise" />
+              <Tab label="Completed" />
               <Tab label="Cancelled/Rejected" />
             </Tabs>
           </Paper>
