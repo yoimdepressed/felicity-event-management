@@ -51,6 +51,9 @@ export const adminAPI = {
   getOrganizer: (id) => api.get(`/admin/organizers/${id}`),
   updateOrganizer: (id, data) => api.put(`/admin/organizers/${id}`, data),
   deleteOrganizer: (id) => api.delete(`/admin/organizers/${id}`),
+  permanentDeleteOrganizer: (id) => api.delete(`/admin/organizers/${id}/permanent`),
+  archiveOrganizer: (id) => api.put(`/admin/organizers/${id}`, { isActive: false }),
+  restoreOrganizer: (id) => api.put(`/admin/organizers/${id}`, { isActive: true }),
   resetPassword: (id, newPassword) => api.post(`/admin/organizers/${id}/reset-password`, { newPassword }),
   getPasswordResetRequests: (status) => api.get('/admin/password-resets', { params: { status } }),
   approvePasswordResetRequest: (id, data) => api.put(`/admin/password-resets/${id}/approve`, data),
@@ -94,6 +97,13 @@ export const feedbackAPI = {
 export const calendarAPI = {
   getCalendarLinks: (eventId) => api.get(`/calendar/event/${eventId}/links`),
   downloadICS: (eventId) => `${API_BASE_URL}/calendar/event/${eventId}/ics`,
+};
+
+export const notificationAPI = {
+  getNotifications: (params = {}) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
 };
 
 export default api;

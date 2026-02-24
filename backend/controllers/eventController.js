@@ -2,6 +2,7 @@
 import Event from '../models/Event.js';
 import User from '../models/User.js';
 import { sendDiscordNotification } from '../utils/discordWebhook.js';
+import { fuzzySearchItems } from '../utils/fuzzySearch.js';
 
 // ============================================
 // PUBLIC CONTROLLERS (No Authentication)
@@ -15,8 +16,8 @@ export const getAllEvents = async (req, res) => {
     const { eventType, eligibility, search, startDate, endDate, followedClubs, organizer } = req.query;
 
     // Build query - only show Published, Ongoing, or Completed events (not Draft or Closed)
-    let query = { 
-      isActive: true, 
+    let query = {
+      isActive: true,
       isApproved: true,
       status: { $in: ['Published', 'Ongoing', 'Completed'] }
     };
@@ -38,13 +39,12 @@ export const getAllEvents = async (req, res) => {
 
     // Filter by date range (event must start after startDate and end before endDate)
     if (startDate) {
-      query.eventStartDate = { $gte: new Date(startDate) };
+      if (!query.eventStartDate) query.eventStartDate = {};
+      query.eventStartDate.$gte = new Date(startDate);
     }
     if (endDate) {
-      if (!query.eventStartDate) {
-        query.eventStartDate = {};
-      }
-      query.eventStartDate.$lte = new Date(endDate);
+      if (!query.eventStartDate) query.eventStartDate = {};
+      query.eventStartDate.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
     }
 
     // Filter by followed clubs (organizer IDs)
@@ -59,29 +59,23 @@ export const getAllEvents = async (req, res) => {
       }
     }
 
-    // Search by event name or organizer name (fuzzy matching with regex)
-    if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive
-      
-      // Find organizers matching the search term
-      const matchingOrganizers = await User.find({
-        role: 'organizer',
-        organizerName: searchRegex,
-      }).select('_id');
-      
-      const organizerIds = matchingOrganizers.map(org => org._id);
-      
-      // Search in event name OR organizer IDs
-      query.$or = [
-        { eventName: searchRegex },
-        { organizer: { $in: organizerIds } },
-      ];
-    }
-
-    // Execute query
-    const events = await Event.find(query)
+    // Execute query with all filters EXCEPT search (fuzzy search is done in memory)
+    let events = await Event.find(query)
       .populate('organizer', 'organizerName category contactEmail')
       .sort({ eventStartDate: 1 });
+
+    // Apply fuzzy search on the filtered results (uses Levenshtein distance)
+    if (search && search.trim()) {
+      events = fuzzySearchItems(
+        events,
+        search.trim(),
+        [
+          (event) => event.eventName,
+          (event) => event.organizer?.organizerName || '',
+        ],
+        0.35 // threshold for fuzzy matching
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -158,7 +152,7 @@ export const getEventById = async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Get event by ID:', error.message);
-    
+
     // Handle invalid ObjectId
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
@@ -240,14 +234,14 @@ export const createEvent = async (req, res) => {
     const startDateObj = new Date(eventStartDate);
     const endDateObj = new Date(eventEndDate);
     const deadlineObj = new Date(registrationDeadline);
-    
+
     if (endDateObj < startDateObj) {
       return res.status(400).json({
         success: false,
         message: 'Event end date must be after or equal to start date',
       });
     }
-    
+
     if (deadlineObj >= startDateObj) {
       return res.status(400).json({
         success: false,
@@ -371,7 +365,7 @@ export const updateEvent = async (req, res) => {
     if (req.body.eventStartDate && req.body.registrationDeadline) {
       const eventDateObj = new Date(req.body.eventStartDate);
       const deadlineObj = new Date(req.body.registrationDeadline);
-      
+
       if (deadlineObj >= eventDateObj) {
         return res.status(400).json({
           success: false,
@@ -383,7 +377,7 @@ export const updateEvent = async (req, res) => {
     if (req.body.eventStartDate && req.body.eventEndDate) {
       const startDateObj = new Date(req.body.eventStartDate);
       const endDateObj = new Date(req.body.eventEndDate);
-      
+
       if (endDateObj < startDateObj) {
         return res.status(400).json({
           success: false,
@@ -405,7 +399,7 @@ export const updateEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Update event:', error.message);
-    
+
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
         success: false,
@@ -465,7 +459,7 @@ export const deleteEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Delete event:', error.message);
-    
+
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
         success: false,
@@ -515,7 +509,7 @@ export const toggleRegistration = async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Toggle registration:', error.message);
-    
+
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
         success: false,
@@ -580,7 +574,7 @@ export const getEventRegistrations = async (req, res) => {
   } catch (error) {
     console.error('[ERROR] Get event registrations:', error.message);
     console.error('[ERROR] Stack:', error.stack);
-    
+
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
         success: false,
@@ -703,7 +697,7 @@ export const permanentlyDeleteEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Permanently delete event:', error.message);
-    
+
     if (error.kind === 'ObjectId') {
       return res.status(404).json({
         success: false,

@@ -17,6 +17,7 @@ import paymentRoutes from './routes/payment.js';
 import discussionRoutes from './routes/discussion.js';
 import feedbackRoutes from './routes/feedback.js';
 import calendarRoutes from './routes/calendar.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Load environment variables
 dotenv.config();
@@ -91,6 +92,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

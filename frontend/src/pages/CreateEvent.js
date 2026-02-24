@@ -5,6 +5,7 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './CreateEvent.css';
+import FormBuilder from '../components/FormBuilder';
 import {
   Container,
   Box,
@@ -147,35 +148,10 @@ const CreateEvent = () => {
     });
   };
 
-  const handleAddCustomField = () => {
-    const newField = {
-      fieldName: `field${Date.now()}`,
-      fieldType: 'text',
-      fieldLabel: '',
-      options: [],
-      required: false,
-      placeholder: '',
-    };
+  const handleCustomFormChange = (updatedFields) => {
     setFormData({
       ...formData,
-      customRegistrationForm: [...formData.customRegistrationForm, newField],
-    });
-  };
-
-  const handleRemoveCustomField = (index) => {
-    const updated = formData.customRegistrationForm.filter((_, i) => i !== index);
-    setFormData({
-      ...formData,
-      customRegistrationForm: updated,
-    });
-  };
-
-  const handleCustomFieldChange = (index, field, value) => {
-    const updated = [...formData.customRegistrationForm];
-    updated[index][field] = value;
-    setFormData({
-      ...formData,
-      customRegistrationForm: updated,
+      customRegistrationForm: updatedFields,
     });
   };
 
@@ -572,7 +548,8 @@ const CreateEvent = () => {
                     dateFormat="MMMM d, yyyy h:mm aa"
                     timeFormat="HH:mm"
                     timeIntervals={15}
-                    maxDate={formData.eventStartDate || new Date()}
+                    minDate={new Date()}
+                    maxDate={formData.eventStartDate || undefined}
                     placeholderText="Select registration deadline"
                     className="custom-datepicker"
                   />
@@ -800,101 +777,13 @@ const CreateEvent = () => {
                 <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
                   Custom Registration Form (Optional)
                 </Typography>
-                <Grid container spacing={3} mb={4}>
-                  <Grid item xs={12}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleAddCustomField}
-                      sx={{ borderRadius: 2, fontWeight: 500 }}
-                    >
-                      + Add Custom Field
-                    </Button>
-                  </Grid>
-                  {formData.customRegistrationForm.map((field, index) => (
-                    <Grid item xs={12} key={index}>
-                      <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} sm={8}>
-                            <TextField
-                              fullWidth
-                              label={`Field ${index + 1} Label`}
-                              value={field.fieldLabel}
-                              onChange={(e) => handleCustomFieldChange(index, 'fieldLabel', e.target.value)}
-                              placeholder="e.g., Dietary Preferences, Accommodation Needed"
-                              InputProps={{
-                                startAdornment: (
-                                  <InputAdornment position="start">
-                                    <Description />
-                                  </InputAdornment>
-                                ),
-                              }}
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <FormControl fullWidth>
-                              <FormLabel sx={{ mb: 1, fontWeight: 'bold', color: 'text.primary' }}>
-                                Field Type
-                              </FormLabel>
-                              <RadioGroup
-                                row
-                                name={`fieldType-${index}`}
-                                value={field.fieldType}
-                                onChange={(e) => handleCustomFieldChange(index, 'fieldType', e.target.value)}
-                              >
-                                <FormControlLabel
-                                  value="text"
-                                  control={<Radio />}
-                                  label="Short Answer"
-                                />
-                                <FormControlLabel
-                                  value="textarea"
-                                  control={<Radio />}
-                                  label="Long Answer"
-                                />
-                                <FormControlLabel
-                                  value="number"
-                                  control={<Radio />}
-                                  label="Number"
-                                />
-                                <FormControlLabel
-                                  value="email"
-                                  control={<Radio />}
-                                  label="Email"
-                                />
-                                <FormControlLabel
-                                  value="phone"
-                                  control={<Radio />}
-                                  label="Phone"
-                                />
-                              </RadioGroup>
-                            </FormControl>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={field.required}
-                                  onChange={(e) => handleCustomFieldChange(index, 'required', e.target.checked)}
-                                  color="primary"
-                                />
-                              }
-                              label="Required"
-                              sx={{ mb: 2 }}
-                            />
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              onClick={() => handleRemoveCustomField(index)}
-                              sx={{ borderRadius: 2, fontWeight: 500 }}
-                            >
-                              Remove Field
-                            </Button>
-                          </Grid>
-                        </Grid>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
+                <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, mb: 3 }}>
+                  <FormBuilder
+                    fields={formData.customRegistrationForm}
+                    onChange={handleCustomFormChange}
+                    disabled={false}
+                  />
+                </Paper>
               </>
             )}
 

@@ -1,6 +1,7 @@
 import Discussion from '../models/Discussion.js';
 import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
+import Notification from '../models/Notification.js';
 
 // Helper: check if user is registered for event or is the organizer
 const canAccessForum = async (userId, userRole, eventId) => {
@@ -127,6 +128,44 @@ export const postMessage = async (req, res) => {
         const populated = await Discussion.findById(message._id)
             .populate('user', 'firstName lastName role organizerName');
 
+        // Create in-app notifications for organizer messages or @everyone mentions
+        const isOrganizerMessage = req.user.role === 'organizer' || req.user.role === 'admin';
+        const hasEveryoneMention = content.includes('@everyone') || content.includes('@all');
+
+        if (isOrganizerMessage || hasEveryoneMention) {
+            try {
+                // Get all registered participants for this event
+                const registrations = await Registration.find({
+                    event: eventId,
+                    registrationStatus: { $in: ['Confirmed', 'PendingApproval'] },
+                }).select('participant');
+
+                const event = await Event.findById(eventId).select('eventName');
+                const eventName = event?.eventName || 'Event';
+
+                // Create notifications for all registered participants (except the sender)
+                const notifications = registrations
+                    .filter(reg => reg.participant.toString() !== req.user.id.toString())
+                    .map(reg => ({
+                        user: reg.participant,
+                        event: eventId,
+                        type: hasEveryoneMention ? 'announcement' : 'organizer_message',
+                        title: hasEveryoneMention
+                            ? `📢 Announcement in ${eventName}`
+                            : `💬 New message from organizer in ${eventName}`,
+                        message: content.trim().substring(0, 200) + (content.length > 200 ? '...' : ''),
+                        discussionMessage: message._id,
+                    }));
+
+                if (notifications.length > 0) {
+                    await Notification.insertMany(notifications);
+                }
+            } catch (notifError) {
+                console.error('[WARN] Failed to create notifications:', notifError.message);
+                // Don't fail the message post if notification creation fails
+            }
+        }
+
         res.status(201).json({
             success: true,
             data: populated,
@@ -161,6 +200,31 @@ export const postAnnouncement = async (req, res) => {
 
         const populated = await Discussion.findById(message._id)
             .populate('user', 'firstName lastName role organizerName');
+
+        // Create notifications for all registered participants
+        try {
+            const registrations = await Registration.find({
+                event: eventId,
+                registrationStatus: { $in: ['Confirmed', 'PendingApproval'] },
+            }).select('participant');
+
+            const notifications = registrations
+                .filter(reg => reg.participant.toString() !== req.user.id.toString())
+                .map(reg => ({
+                    user: reg.participant,
+                    event: eventId,
+                    type: 'announcement',
+                    title: `📢 Announcement in ${event.eventName}`,
+                    message: content.trim().substring(0, 200) + (content.length > 200 ? '...' : ''),
+                    discussionMessage: message._id,
+                }));
+
+            if (notifications.length > 0) {
+                await Notification.insertMany(notifications);
+            }
+        } catch (notifError) {
+            console.error('[WARN] Failed to create announcement notifications:', notifError.message);
+        }
 
         res.status(201).json({
             success: true,

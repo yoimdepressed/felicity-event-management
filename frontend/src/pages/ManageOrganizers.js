@@ -23,6 +23,9 @@ import {
     Chip,
     Tooltip,
     InputAdornment,
+    FormControlLabel,
+    Radio,
+    RadioGroup,
 } from '@mui/material';
 import {
     Delete,
@@ -30,6 +33,9 @@ import {
     Add,
     Search,
     ArrowBack,
+    Archive,
+    Restore,
+    DeleteForever,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -55,8 +61,9 @@ const ManageOrganizers = () => {
     const [resetDialog, setResetDialog] = useState({ open: false, organizer: null });
     const [newPassword, setNewPassword] = useState('');
 
-    // Delete dialog
-    const [deleteDialog, setDeleteDialog] = useState({ open: false, organizer: null, permanent: false });
+    // Delete/Archive dialog
+    const [deleteDialog, setDeleteDialog] = useState({ open: false, organizer: null });
+    const [deleteAction, setDeleteAction] = useState('archive'); // 'archive' or 'permanent'
 
     useEffect(() => {
         fetchOrganizers();
@@ -93,17 +100,30 @@ const ManageOrganizers = () => {
 
     const handleDeleteOrganizer = async () => {
         try {
-            if (deleteDialog.permanent) {
-                await adminAPI.deleteOrganizer(deleteDialog.organizer._id);
+            if (deleteAction === 'permanent') {
+                await adminAPI.permanentDeleteOrganizer(deleteDialog.organizer._id);
+                setSuccess('Organizer permanently deleted');
             } else {
-                await adminAPI.deleteOrganizer(deleteDialog.organizer._id);
+                await adminAPI.archiveOrganizer(deleteDialog.organizer._id);
+                setSuccess('Organizer archived (disabled) successfully');
             }
-            setSuccess('Organizer removed successfully');
-            setDeleteDialog({ open: false, organizer: null, permanent: false });
+            setDeleteDialog({ open: false, organizer: null });
+            setDeleteAction('archive');
             fetchOrganizers();
             setTimeout(() => setSuccess(''), 3000);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete organizer');
+            setError(err.response?.data?.message || 'Failed to remove organizer');
+        }
+    };
+
+    const handleRestoreOrganizer = async (org) => {
+        try {
+            await adminAPI.restoreOrganizer(org._id);
+            setSuccess(`${org.organizerName || 'Organizer'} restored successfully`);
+            fetchOrganizers();
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to restore organizer');
         }
     };
 
@@ -140,7 +160,7 @@ const ManageOrganizers = () => {
                         </Button>
                         <Typography variant="h4">Manage Clubs/Organizers</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Create, manage, and remove organizer accounts
+                            Create, manage, archive, and remove organizer accounts
                         </Typography>
                     </Box>
                     <Button variant="contained" startIcon={<Add />} onClick={() => { setOpenCreate(true); setCredentials(null); setError(''); }}>
@@ -185,7 +205,7 @@ const ManageOrganizers = () => {
                                 </TableRow>
                             ) : (
                                 filteredOrganizers.map((org) => (
-                                    <TableRow key={org._id} hover>
+                                    <TableRow key={org._id} hover sx={{ opacity: org.isActive ? 1 : 0.6 }}>
                                         <TableCell>
                                             <Typography fontWeight={600}>
                                                 {org.organizerName || `${org.firstName} ${org.lastName}`}
@@ -198,8 +218,8 @@ const ManageOrganizers = () => {
                                         <TableCell>{org.contactEmail || '-'}</TableCell>
                                         <TableCell>
                                             <Chip
-                                                label={org.isActive ? 'Active' : 'Disabled'}
-                                                color={org.isActive ? 'success' : 'error'}
+                                                label={org.isActive ? 'Active' : 'Archived'}
+                                                color={org.isActive ? 'success' : 'warning'}
                                                 size="small"
                                             />
                                         </TableCell>
@@ -209,9 +229,22 @@ const ManageOrganizers = () => {
                                                     <LockReset />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Remove Organizer">
-                                                <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, organizer: org, permanent: false })}>
-                                                    <Delete />
+                                            {org.isActive ? (
+                                                <Tooltip title="Archive (Disable)">
+                                                    <IconButton size="small" color="warning" onClick={() => { setDeleteDialog({ open: true, organizer: org }); setDeleteAction('archive'); }}>
+                                                        <Archive />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            ) : (
+                                                <Tooltip title="Restore (Re-enable)">
+                                                    <IconButton size="small" color="success" onClick={() => handleRestoreOrganizer(org)}>
+                                                        <Restore />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                            <Tooltip title="Permanently Delete">
+                                                <IconButton size="small" color="error" onClick={() => { setDeleteDialog({ open: true, organizer: org }); setDeleteAction('permanent'); }}>
+                                                    <DeleteForever />
                                                 </IconButton>
                                             </Tooltip>
                                         </TableCell>
@@ -282,18 +315,65 @@ const ManageOrganizers = () => {
                     </DialogActions>
                 </Dialog>
 
-                {/* Delete Confirmation Dialog */}
-                <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, organizer: null, permanent: false })}>
-                    <DialogTitle>Remove Organizer</DialogTitle>
+                {/* Delete/Archive Confirmation Dialog */}
+                <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, organizer: null })} maxWidth="sm" fullWidth>
+                    <DialogTitle>
+                        {deleteAction === 'permanent' ? '⚠️ Permanently Delete Organizer' : '📦 Archive Organizer'}
+                    </DialogTitle>
                     <DialogContent>
-                        <Typography>
-                            Are you sure you want to remove <strong>{deleteDialog.organizer?.organizerName}</strong>?
-                            This will deactivate their account (they won't be able to log in).
+                        <Typography gutterBottom>
+                            {deleteAction === 'permanent' ? (
+                                <>
+                                    Are you sure you want to <strong>permanently delete</strong> <strong>{deleteDialog.organizer?.organizerName}</strong>?
+                                    This action <strong>cannot be undone</strong>. All data associated with this organizer will be removed.
+                                </>
+                            ) : (
+                                <>
+                                    Are you sure you want to <strong>archive (disable)</strong> <strong>{deleteDialog.organizer?.organizerName}</strong>?
+                                    They will not be able to log in, but their data will be preserved. You can restore them later.
+                                </>
+                            )}
                         </Typography>
+
+                        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                            <Typography variant="subtitle2" gutterBottom>Choose action:</Typography>
+                            <RadioGroup value={deleteAction} onChange={(e) => setDeleteAction(e.target.value)}>
+                                <FormControlLabel
+                                    value="archive"
+                                    control={<Radio />}
+                                    label={
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={500}>Archive (Disable)</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Account is disabled but data is preserved. Can be restored later.
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                                <FormControlLabel
+                                    value="permanent"
+                                    control={<Radio color="error" />}
+                                    label={
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={500} color="error.main">Permanently Delete</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Permanently removes the organizer from the system. Cannot be undone.
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </RadioGroup>
+                        </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setDeleteDialog({ open: false, organizer: null, permanent: false })}>Cancel</Button>
-                        <Button onClick={handleDeleteOrganizer} variant="contained" color="error">Remove</Button>
+                        <Button onClick={() => setDeleteDialog({ open: false, organizer: null })}>Cancel</Button>
+                        <Button
+                            onClick={handleDeleteOrganizer}
+                            variant="contained"
+                            color={deleteAction === 'permanent' ? 'error' : 'warning'}
+                        >
+                            {deleteAction === 'permanent' ? 'Permanently Delete' : 'Archive'}
+                        </Button>
                     </DialogActions>
                 </Dialog>
             </Container>

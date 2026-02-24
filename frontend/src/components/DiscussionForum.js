@@ -67,10 +67,8 @@ const DiscussionForum = ({ eventId }) => {
     const handlePostAnnouncement = async () => {
         if (!announcement.trim()) return;
         try {
-            const response = await discussionAPI.postMessage(eventId, { content: announcement });
-            if (response.data.data?._id) {
-                try { await discussionAPI.pinMessage(response.data.data._id); } catch (e) { /* ignore */ }
-            }
+            // postAnnouncement already auto-pins and sends notifications to all participants
+            await discussionAPI.postMessage(eventId, { content: announcement });
             setAnnouncement('');
             fetchMessages(true);
         } catch (err) {
@@ -172,6 +170,19 @@ const DiscussionForum = ({ eventId }) => {
                     <Typography variant="subtitle2" gutterBottom>
                         <Campaign sx={{ mr: 0.5, verticalAlign: 'middle' }} /> Post Announcement
                     </Typography>
+                    <Box display="flex" gap={1} mb={1}>
+                        <Chip
+                            label="@everyone"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            onClick={() => setAnnouncement(prev => prev.startsWith('@everyone') ? prev : `@everyone ${prev}`)}
+                            sx={{ cursor: 'pointer', fontWeight: 600 }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                            Use @everyone to notify all registered participants
+                        </Typography>
+                    </Box>
                     <Box display="flex" gap={1}>
                         <TextField
                             fullWidth size="small"

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { notificationAPI } from '../services/api';
 import {
   AppBar,
   Toolbar,
@@ -12,6 +13,13 @@ import {
   MenuItem,
   Divider,
   Avatar,
+  Badge,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Paper,
+  Popover,
 } from '@mui/material';
 import {
   Dashboard,
@@ -22,9 +30,12 @@ import {
   Menu as MenuIcon,
   Add,
   EventAvailable,
-  AdminPanelSettings,
   VpnKey,
   Business,
+  Notifications as NotificationsIcon,
+  Campaign,
+  Chat,
+  DoneAll,
 } from '@mui/icons-material';
 
 const Navbar = () => {
@@ -32,6 +43,77 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [notifAnchorEl, setNotifAnchorEl] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread notification count periodically
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user || user.role === 'admin') return;
+    try {
+      const response = await notificationAPI.getUnreadCount();
+      if (response.data.success) {
+        setUnreadCount(response.data.count);
+      }
+    } catch (err) {
+      // Silently fail
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await notificationAPI.getNotifications({ limit: 10 });
+      if (response.data.success) {
+        setNotifications(response.data.data);
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  const handleNotifOpen = (event) => {
+    setNotifAnchorEl(event.currentTarget);
+    fetchNotifications();
+  };
+
+  const handleNotifClose = () => {
+    setNotifAnchorEl(null);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationAPI.markAllAsRead();
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const handleNotifClick = async (notif) => {
+    try {
+      if (!notif.isRead) {
+        await notificationAPI.markAsRead(notif._id);
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
+      }
+      // Navigate to the event
+      if (notif.event?._id) {
+        const basePath = user?.role === 'participant' ? '/participant/event' : '/organizer/event';
+        navigate(`${basePath}/${notif.event._id}`);
+      }
+      handleNotifClose();
+    } catch (err) {
+      console.error('Failed to handle notification click:', err);
+    }
+  };
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -47,6 +129,18 @@ const Navbar = () => {
   };
 
   const isActive = (path) => location.pathname === path;
+
+  const formatTimeAgo = (date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diffMins = Math.floor((now - d) / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
 
   // Participant navigation items
   const participantNavItems = [
@@ -113,12 +207,92 @@ const Navbar = () => {
           ))}
         </Box>
 
-        {/* User Info & Profile Menu */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+        {/* User Info & Notifications & Profile Menu */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Notification Bell - for participants and organizers */}
+          {user && user.role !== 'admin' && (
+            <>
+              <IconButton color="inherit" onClick={handleNotifOpen}>
+                <Badge badgeContent={unreadCount} color="error" max={99}>
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+
+              <Popover
+                open={Boolean(notifAnchorEl)}
+                anchorEl={notifAnchorEl}
+                onClose={handleNotifClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <Paper sx={{ width: 360, maxHeight: 420, overflow: 'auto' }}>
+                  <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Notifications
+                    </Typography>
+                    {unreadCount > 0 && (
+                      <Button size="small" startIcon={<DoneAll />} onClick={handleMarkAllRead}>
+                        Mark all read
+                      </Button>
+                    )}
+                  </Box>
+
+                  {notifications.length === 0 ? (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No notifications yet
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <List disablePadding>
+                      {notifications.map((notif) => (
+                        <ListItem
+                          key={notif._id}
+                          button
+                          onClick={() => handleNotifClick(notif)}
+                          sx={{
+                            bgcolor: notif.isRead ? 'transparent' : 'action.hover',
+                            borderBottom: '1px solid #f0f0f0',
+                            '&:hover': { bgcolor: 'action.selected' },
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 36 }}>
+                            {notif.type === 'announcement' ? (
+                              <Campaign color="primary" fontSize="small" />
+                            ) : (
+                              <Chat color="action" fontSize="small" />
+                            )}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" fontWeight={notif.isRead ? 400 : 600} noWrap>
+                                {notif.title}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                                  {notif.message}
+                                </Typography>
+                                <Typography variant="caption" color="text.disabled">
+                                  {formatTimeAgo(notif.createdAt)}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </Paper>
+              </Popover>
+            </>
+          )}
+
+          <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, ml: 1 }}>
             {user?.firstName} {user?.lastName}
           </Typography>
-          
+
           <IconButton
             size="large"
             edge="end"
@@ -153,7 +327,7 @@ const Navbar = () => {
               </Typography>
             </MenuItem>
             <Divider />
-            
+
             {user?.role === 'participant' && (
               <MenuItem
                 onClick={() => {
@@ -177,7 +351,7 @@ const Navbar = () => {
                 Profile
               </MenuItem>
             )}
-            
+
             <MenuItem onClick={handleLogout}>
               <Logout sx={{ mr: 1 }} fontSize="small" />
               Logout
