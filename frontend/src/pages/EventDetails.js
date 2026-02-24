@@ -87,7 +87,8 @@ const EventDetails = () => {
       if (response.data.data.customRegistrationForm) {
         const initialFormData = {};
         response.data.data.customRegistrationForm.forEach(field => {
-          initialFormData[field.fieldName] = '';
+          const key = field.fieldName || field.fieldLabel;
+          initialFormData[key] = '';
         });
         setCustomFormData(initialFormData);
       }
@@ -183,15 +184,17 @@ const EventDetails = () => {
       if (event.eventType === 'Normal' && event.customRegistrationForm?.length > 0) {
         const formDataArray = [];
         for (const field of event.customRegistrationForm) {
-          if (field.required && !customFormData[field.fieldName]) {
-            setRegistrationError(`${field.fieldLabel} is required`);
+          const key = field.fieldName || field.fieldLabel;
+          const label = field.fieldLabel || field.fieldName;
+          if (field.required && !customFormData[key]) {
+            setRegistrationError(`${label} is required`);
             setRegistering(false);
             return;
           }
           formDataArray.push({
-            fieldName: field.fieldName,
-            fieldLabel: field.fieldLabel,
-            answer: customFormData[field.fieldName] || '',
+            fieldName: key,
+            fieldLabel: label,
+            answer: customFormData[key] || '',
           });
         }
         payload.customFormData = formDataArray;
@@ -468,7 +471,7 @@ const EventDetails = () => {
             <Paper variant="outlined" sx={{ p: 2 }}>
               {event.customRegistrationForm.map((field, index) => (
                 <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
-                  • {field.fieldLabel} {field.required && <span style={{ color: 'red' }}>*</span>}
+                  • {field.fieldLabel || field.fieldName} ({field.fieldType || 'text'}) {field.required && <span style={{ color: 'red' }}>*</span>}
                 </Typography>
               ))}
             </Paper>
@@ -604,17 +607,21 @@ const EventDetails = () => {
               )}
 
               {/* Custom Form Fields (Normal Events) */}
-              {event.eventType === 'Normal' && event.customRegistrationForm?.map((field, index) => (
+              {event.eventType === 'Normal' && event.customRegistrationForm?.map((field, index) => {
+                const fieldKey = field.fieldName || field.fieldLabel;
+                const fieldLabel = field.fieldLabel || field.fieldName;
+                return (
                 <Box key={index} sx={{ mb: 2 }}>
-                  {field.fieldType === 'text' && (
+                  {(field.fieldType === 'text' || field.fieldType === 'email' || field.fieldType === 'phone') && (
                     <TextField
                       fullWidth
-                      label={field.fieldLabel}
+                      label={fieldLabel}
                       required={field.required}
                       placeholder={field.placeholder}
-                      value={customFormData[field.fieldName] || ''}
+                      type={field.fieldType === 'email' ? 'email' : field.fieldType === 'phone' ? 'tel' : 'text'}
+                      value={customFormData[fieldKey] || ''}
                       onChange={(e) =>
-                        setCustomFormData({ ...customFormData, [field.fieldName]: e.target.value })
+                        setCustomFormData({ ...customFormData, [fieldKey]: e.target.value })
                       }
                     />
                   )}
@@ -622,12 +629,12 @@ const EventDetails = () => {
                     <TextField
                       fullWidth
                       type="number"
-                      label={field.fieldLabel}
+                      label={fieldLabel}
                       required={field.required}
                       placeholder={field.placeholder}
-                      value={customFormData[field.fieldName] || ''}
+                      value={customFormData[fieldKey] || ''}
                       onChange={(e) =>
-                        setCustomFormData({ ...customFormData, [field.fieldName]: e.target.value })
+                        setCustomFormData({ ...customFormData, [fieldKey]: e.target.value })
                       }
                     />
                   )}
@@ -636,24 +643,37 @@ const EventDetails = () => {
                       fullWidth
                       multiline
                       rows={3}
-                      label={field.fieldLabel}
+                      label={fieldLabel}
                       required={field.required}
                       placeholder={field.placeholder}
-                      value={customFormData[field.fieldName] || ''}
+                      value={customFormData[fieldKey] || ''}
                       onChange={(e) =>
-                        setCustomFormData({ ...customFormData, [field.fieldName]: e.target.value })
+                        setCustomFormData({ ...customFormData, [fieldKey]: e.target.value })
+                      }
+                    />
+                  )}
+                  {field.fieldType === 'date' && (
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label={fieldLabel}
+                      required={field.required}
+                      InputLabelProps={{ shrink: true }}
+                      value={customFormData[fieldKey] || ''}
+                      onChange={(e) =>
+                        setCustomFormData({ ...customFormData, [fieldKey]: e.target.value })
                       }
                     />
                   )}
                   {field.fieldType === 'dropdown' && (
                     <FormControl fullWidth>
-                      <InputLabel>{field.fieldLabel}</InputLabel>
+                      <InputLabel>{fieldLabel}</InputLabel>
                       <Select
-                        value={customFormData[field.fieldName] || ''}
-                        label={field.fieldLabel}
+                        value={customFormData[fieldKey] || ''}
+                        label={fieldLabel}
                         required={field.required}
                         onChange={(e) =>
-                          setCustomFormData({ ...customFormData, [field.fieldName]: e.target.value })
+                          setCustomFormData({ ...customFormData, [fieldKey]: e.target.value })
                         }
                       >
                         {field.options?.map((option, idx) => (
@@ -664,24 +684,61 @@ const EventDetails = () => {
                       </Select>
                     </FormControl>
                   )}
+                  {field.fieldType === 'radio' && (
+                    <FormControl fullWidth>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        {fieldLabel} {field.required && <span style={{ color: 'red' }}>*</span>}
+                      </Typography>
+                      {field.options?.map((option, idx) => (
+                        <FormControlLabel
+                          key={idx}
+                          control={
+                            <Checkbox
+                              checked={customFormData[fieldKey] === option}
+                              onChange={() =>
+                                setCustomFormData({ ...customFormData, [fieldKey]: option })
+                              }
+                            />
+                          }
+                          label={option}
+                        />
+                      ))}
+                    </FormControl>
+                  )}
                   {field.fieldType === 'checkbox' && (
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={customFormData[field.fieldName] === 'true'}
+                          checked={customFormData[fieldKey] === 'true'}
                           onChange={(e) =>
                             setCustomFormData({
                               ...customFormData,
-                              [field.fieldName]: e.target.checked ? 'true' : 'false',
+                              [fieldKey]: e.target.checked ? 'true' : 'false',
                             })
                           }
                         />
                       }
-                      label={field.fieldLabel}
+                      label={fieldLabel}
                     />
                   )}
+                  {field.fieldType === 'file' && (
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
+                        {fieldLabel} {field.required && <span style={{ color: 'red' }}>*</span>}
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        type="file"
+                        InputLabelProps={{ shrink: true }}
+                        onChange={(e) =>
+                          setCustomFormData({ ...customFormData, [fieldKey]: e.target.files[0]?.name || '' })
+                        }
+                      />
+                    </Box>
+                  )}
                 </Box>
-              ))}
+                );
+              })}
 
               {/* Merchandise Fields */}
               {event.eventType === 'Merchandise' && (

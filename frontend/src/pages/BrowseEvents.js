@@ -61,7 +61,10 @@ const BrowseEvents = () => {
 
   // Fetch events with filters
   useEffect(() => {
-    fetchEvents();
+    const debounceTimer = setTimeout(() => {
+      fetchEvents();
+    }, 300);
+    return () => clearTimeout(debounceTimer);
   }, [searchQuery, eventType, eligibility, startDate, endDate, followedOnly]);
 
   // Fetch trending events
@@ -285,9 +288,9 @@ const BrowseEvents = () => {
         <Typography variant="h6" gutterBottom>
           Filters
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={2} alignItems="center">
           {/* Event Type */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Event Type</InputLabel>
               <Select
@@ -295,7 +298,7 @@ const BrowseEvents = () => {
                 label="Event Type"
                 onChange={(e) => setEventType(e.target.value)}
               >
-                <MenuItem value="All">All</MenuItem>
+                <MenuItem value="All">All Types</MenuItem>
                 <MenuItem value="Normal">Normal Events</MenuItem>
                 <MenuItem value="Merchandise">Merchandise</MenuItem>
               </Select>
@@ -303,7 +306,7 @@ const BrowseEvents = () => {
           </Grid>
 
           {/* Eligibility */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Eligibility</InputLabel>
               <Select
@@ -321,47 +324,34 @@ const BrowseEvents = () => {
             </FormControl>
           </Grid>
 
-          {/* Start Date */}
-          <Grid item xs={12} sm={6} md={2}>
+          {/* Date Range - Start */}
+          <Grid item xs={6} sm={3} md={2}>
             <TextField
               fullWidth
               size="small"
               type="date"
-              label="Start Date"
+              label="From Date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          {/* End Date */}
-          <Grid item xs={12} sm={6} md={2}>
+          {/* Date Range - End */}
+          <Grid item xs={6} sm={3} md={2}>
             <TextField
               fullWidth
               size="small"
               type="date"
-              label="End Date"
+              label="To Date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          {/* Clear Filters Button */}
-          <Grid item xs={12} sm={12} md={2}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleClearFilters}
-              sx={{ height: '40px' }}
-            >
-              Clear
-            </Button>
-          </Grid>
-
-          {/* Followed Clubs Checkbox */}
-          <Grid item xs={12}>
+          {/* Followed Clubs Only */}
+          <Grid item xs={12} sm={6} md={2}>
             <FormControlLabel
               control={
                 <Checkbox
@@ -370,10 +360,49 @@ const BrowseEvents = () => {
                   disabled={!user?.followedClubs || user.followedClubs.length === 0}
                 />
               }
-              label="Show only followed clubs"
+              label={
+                <Typography variant="body2">
+                  Followed Clubs
+                </Typography>
+              }
             />
           </Grid>
+
+          {/* Clear Filters Button */}
+          <Grid item xs={12} sm={6} md={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={handleClearFilters}
+              sx={{ height: '40px' }}
+            >
+              Clear All
+            </Button>
+          </Grid>
         </Grid>
+
+        {/* Active Filters Display */}
+        {(eventType !== 'All' || eligibility !== 'All' || startDate || endDate || followedOnly || searchQuery) && (
+          <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>Active filters:</Typography>
+            {searchQuery && (
+              <Chip label={`Search: "${searchQuery}"`} size="small" onDelete={() => setSearchQuery('')} />
+            )}
+            {eventType !== 'All' && (
+              <Chip label={`Type: ${eventType}`} size="small" onDelete={() => setEventType('All')} />
+            )}
+            {eligibility !== 'All' && (
+              <Chip label={`Eligibility: ${eligibility}`} size="small" onDelete={() => setEligibility('All')} />
+            )}
+            {(startDate || endDate) && (
+              <Chip label={`Date: ${startDate || '...'} → ${endDate || '...'}`} size="small" onDelete={() => { setStartDate(''); setEndDate(''); }} />
+            )}
+            {followedOnly && (
+              <Chip label="Followed Clubs" size="small" color="primary" onDelete={() => setFollowedOnly(false)} />
+            )}
+          </Box>
+        )}
       </Box>
 
       {/* Trending Events Section */}

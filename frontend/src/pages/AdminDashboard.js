@@ -29,7 +29,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { Delete, LockReset, Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Delete, LockReset, Check as CheckIcon, Close as CloseIcon, Archive, Restore, DeleteForever } from '@mui/icons-material';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
@@ -146,18 +146,44 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteOrganizer = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this organizer?')) {
+    if (!window.confirm('Are you sure you want to permanently delete this organizer? This cannot be undone.')) {
       return;
     }
 
     try {
-      await adminAPI.deleteOrganizer(id);
-      setSuccess('Organizer deleted successfully');
+      await adminAPI.permanentDeleteOrganizer(id);
+      setSuccess('Organizer permanently deleted');
       fetchOrganizers();
       fetchStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete organizer');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleArchiveOrganizer = async (id) => {
+    try {
+      await adminAPI.archiveOrganizer(id);
+      setSuccess('Organizer archived (disabled) successfully');
+      fetchOrganizers();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to archive organizer');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleRestoreOrganizer = async (id) => {
+    try {
+      await adminAPI.restoreOrganizer(id);
+      setSuccess('Organizer restored successfully');
+      fetchOrganizers();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to restore organizer');
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -343,14 +369,14 @@ const AdminDashboard = () => {
                     </TableRow>
                   ) : (
                     organizers.map((org) => (
-                      <TableRow key={org._id}>
+                      <TableRow key={org._id} sx={{ opacity: org.isActive ? 1 : 0.6 }}>
                         <TableCell>{org.organizerName || `${org.firstName} ${org.lastName}`}</TableCell>
                         <TableCell>{org.email}</TableCell>
                         <TableCell>{org.category}</TableCell>
                         <TableCell>
                           <Chip
-                            label={org.isActive ? 'Active' : 'Inactive'}
-                            color={org.isActive ? 'success' : 'default'}
+                            label={org.isActive ? 'Active' : 'Archived'}
+                            color={org.isActive ? 'success' : 'warning'}
                             size="small"
                           />
                         </TableCell>
@@ -363,13 +389,32 @@ const AdminDashboard = () => {
                           >
                             <LockReset />
                           </IconButton>
+                          {org.isActive ? (
+                            <IconButton
+                              color="warning"
+                              size="small"
+                              onClick={() => handleArchiveOrganizer(org._id)}
+                              title="Archive (Disable)"
+                            >
+                              <Archive />
+                            </IconButton>
+                          ) : (
+                            <IconButton
+                              color="success"
+                              size="small"
+                              onClick={() => handleRestoreOrganizer(org._id)}
+                              title="Restore (Re-enable)"
+                            >
+                              <Restore />
+                            </IconButton>
+                          )}
                           <IconButton
                             color="error"
                             size="small"
                             onClick={() => handleDeleteOrganizer(org._id)}
-                            title="Delete"
+                            title="Permanently Delete"
                           >
-                            <Delete />
+                            <DeleteForever />
                           </IconButton>
                         </TableCell>
                       </TableRow>

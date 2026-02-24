@@ -74,6 +74,7 @@ export const attendanceAPI = {
 export const discussionAPI = {
   getMessages: (eventId, params = {}) => api.get(`/discussions/event/${eventId}`, { params }),
   postMessage: (eventId, data) => api.post(`/discussions/event/${eventId}`, data),
+  postAnnouncement: (eventId, data) => api.post(`/discussions/event/${eventId}/announcement`, data),
   deleteMessage: (id) => api.delete(`/discussions/${id}`),
   pinMessage: (id) => api.put(`/discussions/${id}/pin`),
   reactToMessage: (id, emoji) => api.post(`/discussions/${id}/react`, { emoji }),

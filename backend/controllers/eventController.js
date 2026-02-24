@@ -72,8 +72,9 @@ export const getAllEvents = async (req, res) => {
         [
           (event) => event.eventName,
           (event) => event.organizer?.organizerName || '',
+          (event) => (event.tags || []).join(' '),
         ],
-        0.35 // threshold for fuzzy matching
+        0.3 // threshold for fuzzy matching (lower = more tolerant of typos)
       );
     }
 
@@ -386,11 +387,29 @@ export const updateEvent = async (req, res) => {
       }
     }
 
+    // Track if status is changing to Published
+    const wasNotPublished = event.status !== 'Published';
+    const willBePublished = req.body.status === 'Published';
+
     // Update event - disable validators to avoid date conflicts when updating single fields
     event = await Event.findByIdAndUpdate(req.params.id, req.body, {
       returnDocument: 'after',
       runValidators: false, // Disable validators since we already validated above
-    }).populate('organizer', 'organizerName category contactEmail');
+    }).populate('organizer', 'organizerName category contactEmail discordWebhook');
+
+    // Send Discord notification if event is being published for the first time
+    if (wasNotPublished && willBePublished && event.organizer?.discordWebhook) {
+      try {
+        await sendDiscordNotification(
+          event.organizer.discordWebhook,
+          event,
+          'published'
+        );
+      } catch (webhookError) {
+        console.error('[Discord] Webhook notification failed on publish:', webhookError.message);
+        // Don't fail the request if webhook fails
+      }
+    }
 
     res.status(200).json({
       success: true,

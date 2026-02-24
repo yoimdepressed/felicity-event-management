@@ -68,7 +68,7 @@ const DiscussionForum = ({ eventId }) => {
         if (!announcement.trim()) return;
         try {
             // postAnnouncement already auto-pins and sends notifications to all participants
-            await discussionAPI.postMessage(eventId, { content: announcement });
+            await discussionAPI.postAnnouncement(eventId, { content: announcement });
             setAnnouncement('');
             fetchMessages(true);
         } catch (err) {

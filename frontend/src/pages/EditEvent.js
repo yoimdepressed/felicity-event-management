@@ -245,7 +245,16 @@ const EditEvent = () => {
             updateData.maxParticipants = parseInt(formData.maxParticipants);
           }
           updateData.price = 0;
-          updateData.customRegistrationForm = formData.customRegistrationForm;
+          // Transform custom form fields to ensure fieldLabel is set
+          updateData.customRegistrationForm = (formData.customRegistrationForm || []).map((field, index) => ({
+            fieldName: field.fieldName || field.fieldLabel || `field_${index}`,
+            fieldLabel: field.fieldLabel || field.fieldName || `Field ${index + 1}`,
+            fieldType: field.fieldType || 'text',
+            required: field.required || false,
+            placeholder: field.placeholder || '',
+            options: field.options || [],
+            order: index,
+          }));
         } else {
           updateData.price = parseFloat(formData.price);
           updateData.availableStock = parseInt(formData.availableStock);

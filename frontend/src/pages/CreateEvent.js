@@ -226,7 +226,16 @@ const CreateEvent = () => {
           eventData.maxParticipants = parseInt(formData.maxParticipants);
         }
         eventData.price = 0;
-        eventData.customRegistrationForm = formData.customRegistrationForm;
+        // Transform custom form fields to ensure fieldLabel is set
+        eventData.customRegistrationForm = (formData.customRegistrationForm || []).map((field, index) => ({
+          fieldName: field.fieldName || field.fieldLabel || `field_${index}`,
+          fieldLabel: field.fieldLabel || field.fieldName || `Field ${index + 1}`,
+          fieldType: field.fieldType || 'text',
+          required: field.required || false,
+          placeholder: field.placeholder || '',
+          options: field.options || [],
+          order: index,
+        }));
       } else {
         eventData.price = parseFloat(formData.price);
         eventData.availableStock = parseInt(formData.availableStock);
@@ -511,6 +520,11 @@ const CreateEvent = () => {
                     timeFormat="HH:mm"
                     timeIntervals={15}
                     minDate={new Date()}
+                    filterDate={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date >= today;
+                    }}
                     placeholderText="Select start date & time"
                     className="custom-datepicker"
                   />
@@ -530,6 +544,12 @@ const CreateEvent = () => {
                     timeFormat="HH:mm"
                     timeIntervals={15}
                     minDate={formData.eventStartDate || new Date()}
+                    filterDate={(date) => {
+                      const minD = formData.eventStartDate || new Date();
+                      const min = new Date(minD);
+                      min.setHours(0, 0, 0, 0);
+                      return date >= min;
+                    }}
                     placeholderText="Select end date & time"
                     className="custom-datepicker"
                   />
@@ -550,6 +570,11 @@ const CreateEvent = () => {
                     timeIntervals={15}
                     minDate={new Date()}
                     maxDate={formData.eventStartDate || undefined}
+                    filterDate={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date >= today;
+                    }}
                     placeholderText="Select registration deadline"
                     className="custom-datepicker"
                   />

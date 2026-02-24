@@ -41,6 +41,7 @@ const FormBuilder = ({ fields = [], onChange, disabled = false }) => {
         const newField = {
             id: Date.now().toString(),
             fieldName: '',
+            fieldLabel: '',
             fieldType: 'text',
             required: false,
             placeholder: '',
@@ -51,6 +52,10 @@ const FormBuilder = ({ fields = [], onChange, disabled = false }) => {
 
     const updateField = (index, updates) => {
         const updated = [...fields];
+        // Auto-sync fieldName from fieldLabel if fieldLabel is being changed
+        if (updates.fieldName !== undefined) {
+            updates.fieldLabel = updates.fieldName;
+        }
         updated[index] = { ...updated[index], ...updates };
         onChange(updated);
     };
