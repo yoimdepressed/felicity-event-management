@@ -519,9 +519,14 @@ eventSchema.methods.getEditableFields = function () {
     case 'Published':
       // Published events before start date
       if (now < this.eventStartDate) {
+        // Allow customRegistrationForm edits only if form is not locked yet
+        const editableFields = ['description', 'registrationDeadline', 'maxParticipants', 'availableStock', 'tags'];
+        if (!this.formLocked) {
+          editableFields.push('customRegistrationForm');
+        }
         return {
           canEdit: true,
-          editableFields: ['description', 'registrationDeadline', 'maxParticipants', 'availableStock', 'tags'],
+          editableFields,
           canPublish: false,
           canDelete: false,
           canCloseRegistration: true,

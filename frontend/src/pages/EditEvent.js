@@ -124,6 +124,7 @@ const EditEvent = () => {
         eligibility: event.eligibility || 'Open to All',
         tags: event.tags || [],
         customRegistrationForm: event.customRegistrationForm || [],
+        formLocked: event.formLocked || false,
         status: event.status || 'Draft',
       });
     } catch (err) {
@@ -280,6 +281,17 @@ const EditEvent = () => {
         }
         if (permissions.editableFields.includes('tags')) {
           updateData.tags = formData.tags;
+        }
+        if (permissions.editableFields.includes('customRegistrationForm') && !formData.formLocked) {
+          updateData.customRegistrationForm = (formData.customRegistrationForm || []).map((field, index) => ({
+            fieldName: field.fieldName || field.fieldLabel || `field_${index}`,
+            fieldLabel: field.fieldLabel || field.fieldName || `Field ${index + 1}`,
+            fieldType: field.fieldType || 'text',
+            required: field.required || false,
+            placeholder: field.placeholder || '',
+            options: field.options || [],
+            order: index,
+          }));
         }
       }
 
@@ -849,8 +861,11 @@ const EditEvent = () => {
                     </AccordionSummary>
                     <AccordionDetails>
                       <FormBuilder
-                        eventId={id}
-                        onSave={fetchEventAndPermissions}
+                        fields={formData.customRegistrationForm || []}
+                        onChange={(updatedFields) =>
+                          setFormData(prev => ({ ...prev, customRegistrationForm: updatedFields }))
+                        }
+                        disabled={formData.formLocked}
                       />
                     </AccordionDetails>
                   </Accordion>
