@@ -1,5 +1,4 @@
-Frontend URL: [To be deployed - will update after deployment to Vercel/Netlify]
-Backend URL: [To be deployed - will update after deployment to Render/Railway/Heroku]
+Frontend URL: https://felicity-event-management-7qwv-pvup8accy.vercel.app
+Backend URL: [Your Render/Railway backend URL here]
 
-Deployment Status: Development Phase
-Last Updated: February 10, 2026
+Note: Set the REACT_APP_API_URL environment variable in Vercel project settings to point to your deployed backend API URL (e.g., https://your-backend.onrender.com/api).
