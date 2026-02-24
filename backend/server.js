@@ -46,12 +46,15 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (server-to-server, mobile apps, curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Allow exact matches from the allowlist
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow all vercel.app subdomains (covers preview deployments and production)
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    // Allow all netlify.app subdomains
+    if (origin.endsWith('.netlify.app')) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));

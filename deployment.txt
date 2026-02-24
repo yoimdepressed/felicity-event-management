@@ -1,4 +1,4 @@
-Frontend URL: https://felicity-event-management-7qwv-pvup8accy.vercel.app
-Backend URL: [Your Render/Railway backend URL here]
+Frontend URL: https://felicity-event-management-7qwv.vercel.app
+Backend URL: [Your Render backend URL - e.g. https://felicity-event-management.onrender.com]
 
-Note: Set the REACT_APP_API_URL environment variable in Vercel project settings to point to your deployed backend API URL (e.g., https://your-backend.onrender.com/api).
+Note: The REACT_APP_API_URL environment variable must be set in Vercel project settings pointing to the backend API URL.
